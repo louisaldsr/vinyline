@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="../docs/logo.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Vinyline Review</title>
+<style>
+  :root {
+    --bg: #111111;
+    --panel: #1a1a1a;
+    --fg: #f2efe8;
+    --muted: #8a867e;
+    --accent: #e8b44a;
+    --line: #2e2e2e;
+    --bad: #e57b6b;
+    --ok: #7bc47f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  header h1 { font-size: 16px; font-weight: 600; margin: 0 auto 0 0; color: var(--muted); }
+  button, input, select {
+    font: inherit;
+    color: var(--fg);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 12px;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: #555; }
+  button.primary { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 600; }
+  button.on { border-color: var(--bad); color: var(--bad); }
+  input[type=number] { width: 90px; }
+  .card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .card .meta { color: var(--muted); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .card .oeuvre { font-size: 22px; font-weight: 650; }
+  .card .song { font-size: 16px; }
+  .card .song span { color: var(--muted); }
+  .card .year { grid-row: 1 / span 3; grid-column: 2; align-self: center; font-size: 40px; font-weight: 800; color: var(--accent); }
+  .edit { display: grid; grid-template-columns: 2fr 2fr 2fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .edit .wide { grid-column: 1 / -1; }
+  .edit label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  .edit input { width: 100%; }
+  .edit input.changed { border-color: var(--accent); }
+  button.danger { border-color: var(--bad); color: var(--bad); }
+  .card.deleted { opacity: 0.45; }
+  .card.deleted .oeuvre { text-decoration: line-through; }
+  .deleted-tag { color: var(--bad); font-size: 12px; margin-left: 6px; }
+  .edited { color: var(--accent); font-size: 12px; margin-left: 6px; }
+  .reports { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .reports:empty { display: none; }
+  .report { text-align: left; border: 1px solid #b0503f; background: rgba(176,80,63,0.12); border-radius: 8px; padding: 6px 10px; font-size: 14px; cursor: pointer; color: inherit; }
+  .report b { margin-right: 6px; }
+  .report .when { opacity: 0.7; font-size: 12px; margin-left: 6px; }
+  @media (max-width: 700px) { .edit { grid-template-columns: 1fr 1fr; } }
+  .player {
+    position: relative;
+    width: min(100%, calc(45vh * 16 / 9));
+    margin: 0 auto;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .player iframe, .player #yt { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .empty {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    color: var(--muted); text-align: center; padding: 20px;
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .row .grow { flex: 1; min-width: 160px; }
+  .status { font-size: 13px; color: var(--muted); }
+  .status.bad { color: var(--bad); }
+  .status.ok { color: var(--ok); }
+  .transport {
+    margin-top: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .seek { display: flex; align-items: center; gap: 12px; }
+  .seek input[type=range] {
+    flex: 1;
+    height: 28px;
+    accent-color: var(--accent);
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; min-width: 96px; text-align: right; }
+  .buttons { display: flex; justify-content: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .buttons button { min-width: 64px; padding: 10px 14px; font-size: 15px; }
+  .buttons button.play { min-width: 110px; }
+  .help { color: var(--muted); font-size: 13px; margin-top: 18px; }
+  kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 12px; }
+  .changes { margin-top: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  .changes summary { cursor: pointer; color: var(--muted); }
+  .changes pre { margin: 10px 0 0; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><img src="../docs/logo.svg" alt="" style="width:1.1em;height:1.1em;vertical-align:-0.18em;margin-right:0.35em">Vinyline review</h1>
+    <button id="prev">← Prev</button>
+    <input type="number" id="jump" min="1" title="Card ID">
+    <span class="status" id="pos"></span>
+    <button id="next">Next →</button>
+    <select id="filter" title="Which cards to step through">
+      <option value="all">All cards</option>
+      <option value="missing">No video yet</option>
+      <option value="reported">Reported in game (to fix)</option>
+      <option value="flagged">Flagged</option>
+      <option value="changed">Changed</option>
+      <option value="deleted">Deleted</option>
+    </select>
+  </header>
+
+  <div class="card" id="card">
+    <div class="meta" id="meta"></div>
+    <div class="oeuvre" id="oeuvre"></div>
+    <div class="song" id="song"></div>
+    <div class="year" id="year"></div>
+    <div class="reports" id="reports"></div>
+  </div>
+
+  <div class="edit">
+    <label>Title <input id="e_oeuvre"></label>
+    <label>Song <input id="e_morceau"></label>
+    <label>Artist / composer <input id="e_artiste"></label>
+    <label class="small">Year <input id="e_annee" inputmode="numeric"></label>
+    <label class="wide">Tags <input id="e_tags" list="tagList" placeholder="Films, Séries TV, Musique;Disco…"></label>
+    <datalist id="tagList">
+      <option value="Manga/Anime"><option value="Dessins animés"><option value="Films"><option value="Disney/Pixar">
+      <option value="Jeux vidéo"><option value="Séries TV"><option value="Musique">
+    </datalist>
+  </div>
+
+  <div class="player">
+    <div id="yt"></div>
+    <div class="empty" id="empty" hidden></div>
+  </div>
+
+  <div class="transport">
+    <div class="seek">
+      <input type="range" id="seek" min="0" max="100" step="1" value="0" aria-label="Position">
+      <span class="time" id="time">0:00 / 0:00</span>
+    </div>
+    <div class="buttons">
+      <button id="toStart" title="Back to the card's start point">⏮ Start point</button>
+      <button data-skip="-30">−30 s</button>
+      <button data-skip="-10">−10 s</button>
+      <button data-skip="-5">−5 s</button>
+      <button class="primary play" id="playBtn">Play</button>
+      <button data-skip="5">+5 s</button>
+      <button data-skip="10">+10 s</button>
+      <button data-skip="30">+30 s</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <span class="status" id="status"></span>
+  </div>
+
+  <div class="row">
+    <button id="setStart" title="Use the current playback time as the card's start point">Start here</button>
+    <span class="status" id="startInfo"></span>
+    <button id="flag">Flag</button>
+    <button id="del" title="Remove this card from the game">Delete card</button>
+    <a id="openYt" target="_blank" rel="noopener"><button>Open on YouTube</button></a>
+    <a id="searchYt" target="_blank" rel="noopener"><button>Search YouTube</button></a>
+  </div>
+
+  <div class="row">
+    <input class="grow" id="newId" placeholder="Replacement video: paste a YouTube link or ID, then Enter">
+    <input class="grow" id="note" placeholder="Note (optional)">
+  </div>
+
+  <details class="changes">
+    <summary>Changes: <span id="count">0</span> cards · <button id="export" class="primary">Download review.csv</button> <button id="clear">Clear all</button></summary>
+    <pre id="changeList"></pre>
+  </details>
+
+  <p class="help">
+    <kbd>←</kbd> <kbd>→</kbd> previous / next card · <kbd>Space</kbd> or <kbd>K</kbd> play / pause ·
+    <kbd>J</kbd> <kbd>L</kbd> −10 / +10 s · <kbd>,</kbd> <kbd>.</kbd> −5 / +5 s · <kbd>S</kbd> start here · <kbd>F</kbd> flag.
+    Keyboard shortcuts stop working after clicking inside the video itself: click anywhere on the page to get them back.
+    Changes are kept in this browser. When done, download review.csv and run
+    <code>python3 scripts/apply_review.py review.csv</code>.
+  </p>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const STORE = "vinyline-review-v1";
+
+  let cards = [];
+  let idx = 0;
+  let player = null;
+  let changes = {};
+  let reports = {};  // id de carte → signalements faits en partie
+
+  // ---------- Storage (local page, per browser) ----------
+  try { changes = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch (e) { changes = {}; }
+  function save() {
+    try { localStorage.setItem(STORE, JSON.stringify(changes)); } catch (e) { /* not critical */ }
+    renderChanges();
+  }
+  function ch(id) { return changes[id] || (changes[id] = {}); }
+  function prune(id) {
+    const c = changes[id];
+    if (c && !c.del && !c.flag && c.start == null && !c.video && !c.note && FIELDS.every((k) => c[k] == null)) delete changes[id];
+  }
+
+  // ---------- CSV ----------
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') q = false;
+        else field += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+      else if (c !== "\r") field += c;
+    }
+    if (field || row.length) { row.push(field); rows.push(row); }
+    const head = rows.shift();
+    return rows.filter((r) => r.length > 1).map((r) => Object.fromEntries(head.map((h, i) => [h, r[i] || ""])));
+  }
+
+  const FIELDS = ["oeuvre", "morceau", "artiste", "annee", "tags"];
+  function eff(card, k) {
+    const c = changes[card.id];
+    return c && c[k] != null ? c[k] : card[k];
+  }
+  function videoOf(card) { return (changes[card.id] && changes[card.id].video) || card.youtube_id; }
+  function startOf(card) {
+    const c = changes[card.id];
+    if (c && c.start != null) return c.start;
+    return parseInt(card.debut_s || "0", 10) || 0;
+  }
+  function parseVideoId(text) {
+    const t = text.trim();
+    const m = t.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);
+    if (m) return m[1];
+    return /^[\w-]{11}$/.test(t) ? t : "";
+  }
+
+  // ---------- Navigation ----------
+  function matches(card) {
+    const f = $("filter").value;
+    const c = changes[card.id];
+    if (f === "missing") return !videoOf(card);
+    if (f === "reported") return !!reports[card.id] && !c;
+    if (f === "flagged") return !!(c && c.flag);
+    if (f === "changed") return !!c;
+    if (f === "deleted") return !!(c && c.del);
+    return true;
+  }
+  function step(dir) {
+    for (let i = idx + dir; i >= 0 && i < cards.length; i += dir) {
+      if (matches(cards[i])) { show(i); return; }
+    }
+  }
+
+  function show(i, reload = true) {
+    idx = i;
+    const card = cards[i];
+    try { history.replaceState(null, "", "#" + card.id); } catch (e) {}
+    $("jump").value = parseInt(card.id, 10);
+    $("pos").textContent = `${i + 1} / ${cards.length}`;
+    $("meta").textContent = `${card.id} · ${card.type}` + (eff(card, "tags") ? ` · ${eff(card, "tags")}` : "");
+    $("oeuvre").textContent = eff(card, "oeuvre");
+    $("song").innerHTML = "";
+    $("song").append(eff(card, "morceau"), " ");
+    const by = document.createElement("span");
+    by.textContent = "· " + eff(card, "artiste");
+    $("song").append(by);
+    $("year").textContent = eff(card, "annee");
+    // Signalements faits pendant les parties (data/signalements.csv) : clic = aller au moment signalé
+    const R = $("reports"); R.innerHTML = "";
+    for (const r of reports[card.id] || []) {
+      const b = document.createElement("button");
+      b.className = "report";
+      const pos = r.position_s !== "" ? parseInt(r.position_s, 10) : null;
+      b.append(Object.assign(document.createElement("b"), { textContent: "⚑ " + (r.raison || "Signalée") }),
+        pos != null ? ` at ${Math.floor(pos / 60)}:${String(pos % 60).padStart(2, "0")}` : "", r.note ? ` · ${r.note}` : "",
+        Object.assign(document.createElement("span"), { className: "when", textContent: r.date }));
+      if (r.youtube_id && r.youtube_id !== card.youtube_id) b.title = "Reported on an older video";
+      b.onclick = () => { if (pos != null && player && player.seekTo) { player.seekTo(pos, true); player.playVideo(); } };
+      R.append(b);
+    }
+    const edited = FIELDS.some((k) => changes[card.id] && changes[card.id][k] != null);
+    if (edited) {
+      const m = document.createElement("span");
+      m.className = "edited";
+      m.textContent = "edited";
+      $("meta").append(m);
+    }
+    const isDel = !!(changes[card.id] && changes[card.id].del);
+    $("card").classList.toggle("deleted", isDel);
+    $("del").classList.toggle("danger", isDel);
+    $("del").textContent = isDel ? "Deleted (undo)" : "Delete card";
+    if (isDel) {
+      const d = document.createElement("span");
+      d.className = "deleted-tag";
+      d.textContent = "DELETED";
+      $("meta").append(d);
+    }
+    for (const k of FIELDS) {
+      $("e_" + k).value = eff(card, k);
+      $("e_" + k).classList.toggle("changed", !!(changes[card.id] && changes[card.id][k] != null));
+    }
+
+    const c = changes[card.id] || {};
+    $("flag").classList.toggle("on", !!c.flag);
+    $("flag").textContent = c.flag ? "Flagged" : "Flag";
+    $("note").value = c.note || "";
+    $("newId").value = c.video || "";
+    $("startInfo").textContent = `start: ${startOf(card)} s` + (c.start != null ? " (changed)" : "");
+
+    const q = encodeURIComponent(`${eff(card, "morceau").replace(/\(VF\)/, "")} ${eff(card, "artiste")} ${eff(card, "oeuvre")}`);
+    $("searchYt").href = "https://www.youtube.com/results?search_query=" + q;
+
+    const vid = videoOf(card);
+    if (reload) setStatus("");
+    if (!vid) {
+      $("empty").hidden = false;
+      $("empty").textContent = "No video yet. Use Search YouTube, then paste the link below.";
+      $("openYt").removeAttribute("href");
+      if (reload && player && player.stopVideo) player.stopVideo();
+      return;
+    }
+    $("empty").hidden = true;
+    $("openYt").href = `https://www.youtube.com/watch?v=${vid}&t=${startOf(card)}s`;
+    if (reload && player && player.loadVideoById) player.loadVideoById({ videoId: vid, startSeconds: startOf(card) });
+  }
+
+  function setStatus(text, cls = "") {
+    $("status").textContent = text;
+    $("status").className = "status " + cls;
+  }
+
+  // ---------- Changes panel ----------
+  function renderChanges() {
+    const ids = Object.keys(changes).sort();
+    $("count").textContent = ids.length;
+    $("changeList").textContent = ids.map((id) => {
+      const c = changes[id];
+      const edits = FIELDS.filter((k) => c[k] != null).map((k) => `${k}="${c[k]}"`).join(" ");
+      if (c.del) return `${id}  DELETE`;
+      return [id, c.flag ? "FLAG" : "", edits, c.start != null ? `start=${c.start}` : "", c.video ? `video=${c.video}` : "", c.note || ""]
+        .filter(Boolean).join("  ");
+    }).join("\n") || "No changes yet.";
+  }
+
+  function exportCSV() {
+    const esc = (s) => /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    const lines = ["id,delete,flag,debut_s,youtube_id,oeuvre,morceau,artiste,annee,tags,note"];
+    for (const id of Object.keys(changes).sort()) {
+      const c = changes[id];
+      lines.push([id, c.del ? "1" : "", c.flag ? "1" : "", c.start != null ? String(c.start) : "", c.video || "",
+        ...FIELDS.map((k) => esc(c[k] != null ? c[k] : "")), esc(c.note || "")].join(","));
+    }
+    const blob = new Blob([lines.join("\n") + "\n"], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "review.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ---------- Transport ----------
+  let dragging = false;
+  const fmt = (t) => {
+    t = Math.max(0, Math.floor(t || 0));
+    return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0");
+  };
+  function playing() { return player && player.getPlayerState && player.getPlayerState() === 1; }
+  function togglePlay() {
+    if (!player || !player.getPlayerState) return;
+    playing() ? player.pauseVideo() : player.playVideo();
+  }
+  function skip(sec) {
+    if (!player || !player.getCurrentTime) return;
+    const d = player.getDuration() || 0;
+    let t = player.getCurrentTime() + sec;
+    t = Math.max(0, d ? Math.min(t, d - 1) : t);
+    player.seekTo(t, true);
+    refreshTime(t);
+  }
+  function refreshTime(forced) {
+    if (!player || !player.getDuration) return;
+    const d = player.getDuration() || 0;
+    const t = forced != null ? forced : player.getCurrentTime() || 0;
+    if (!dragging) {
+      $("seek").max = Math.max(1, Math.floor(d));
+      $("seek").value = Math.floor(t);
+    }
+    $("time").textContent = `${fmt(dragging ? $("seek").value : t)} / ${fmt(d)}`;
+    $("playBtn").textContent = playing() ? "Pause" : "Play";
+  }
+  setInterval(() => refreshTime(), 250);
+  $("seek").addEventListener("input", () => { dragging = true; refreshTime(); });
+  $("seek").addEventListener("change", () => {
+    dragging = false;
+    if (player && player.seekTo) player.seekTo(Number($("seek").value), true);
+    $("seek").blur();
+  });
+  $("playBtn").onclick = togglePlay;
+  $("toStart").onclick = () => {
+    if (!player || !player.seekTo) return;
+    player.seekTo(startOf(cards[idx]), true);
+    player.playVideo();
+  };
+  document.querySelectorAll("[data-skip]").forEach((b) => b.onclick = () => skip(Number(b.dataset.skip)));
+
+  // ---------- Events ----------
+  $("prev").onclick = () => step(-1);
+  $("next").onclick = () => step(1);
+  $("filter").onchange = () => { if (!matches(cards[idx])) step(1); };
+  $("jump").onchange = () => {
+    const n = parseInt($("jump").value, 10);
+    const i = cards.findIndex((c) => parseInt(c.id, 10) === n);
+    if (i >= 0) show(i);
+  };
+  $("flag").onclick = () => {
+    const id = cards[idx].id;
+    ch(id).flag = !ch(id).flag;
+    const on = ch(id).flag;
+    prune(id); save();
+    $("flag").classList.toggle("on", on);
+    $("flag").textContent = on ? "Flagged" : "Flag";
+  };
+  $("del").onclick = () => {
+    const id = cards[idx].id;
+    ch(id).del = !ch(id).del;
+    prune(id); save();
+    show(idx, false);
+  };
+  $("setStart").onclick = () => {
+    if (!player || !player.getCurrentTime) return;
+    const id = cards[idx].id;
+    ch(id).start = Math.floor(player.getCurrentTime());
+    save();
+    $("startInfo").textContent = `start: ${changes[id].start} s (changed)`;
+  };
+  $("newId").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const id = cards[idx].id;
+    const raw = $("newId").value.trim();
+    if (!raw) { delete ch(id).video; prune(id); save(); show(idx); return; }
+    const vid = parseVideoId(raw);
+    if (!vid) { setStatus("Not a YouTube link or ID.", "bad"); return; }
+    ch(id).video = vid;
+    delete ch(id).start; // the old start time belonged to the old video
+    save(); show(idx);
+  });
+  for (const k of FIELDS) {
+    $("e_" + k).addEventListener("change", () => {
+      const card = cards[idx];
+      const v = $("e_" + k).value.trim();
+      if (!v || v === card[k]) delete ch(card.id)[k];
+      else ch(card.id)[k] = v;
+      prune(card.id); save();
+      // Met à jour l'affichage sans recharger la vidéo
+      show(idx, false);
+    });
+  }
+  $("note").addEventListener("change", () => {
+    const id = cards[idx].id;
+    ch(id).note = $("note").value.trim();
+    prune(id); save();
+  });
+  $("export").onclick = (e) => { e.preventDefault(); exportCSV(); };
+  $("clear").onclick = (e) => {
+    e.preventDefault();
+    if (!confirm("Clear all review changes?")) return;
+    changes = {}; save(); show(idx);
+  };
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    if (e.key === "ArrowRight") step(1);
+    else if (e.key === "ArrowLeft") step(-1);
+    else if (e.key === "f" || e.key === "F") $("flag").click();
+    else if (e.key === "s" || e.key === "S") $("setStart").click();
+    else if (e.key === " " || e.key === "k" || e.key === "K") { e.preventDefault(); togglePlay(); }
+    else if (e.key === "j" || e.key === "J") skip(-10);
+    else if (e.key === "l" || e.key === "L") skip(10);
+    else if (e.key === ",") skip(-5);
+    else if (e.key === ".") skip(5);
+  });
+
+  document.addEventListener("click", (e) => { if (e.target.tagName === "BUTTON") e.target.blur(); });
+
+  // ---------- Start ----------
+  window.onYouTubeIframeAPIReady = () => {
+    player = new YT.Player("yt", {
+      playerVars: { playsinline: 1, rel: 0 },
+      events: {
+        onReady: () => show(idx),
+        onStateChange: (e) => { if (e.data === 1) setStatus("Playing", "ok"); },
+        onError: (e) => {
+          const msg = e.data === 101 || e.data === 150
+            ? "Embedding is blocked for this video: it won't play in the game. Replace it."
+            : "Video unavailable or deleted. Replace it.";
+          setStatus(msg, "bad");
+        },
+      },
+    });
+  };
+
+  const loadReports = fetch("../data/signalements.csv?v=" + Date.now())
+    .then((r) => (r.ok ? r.text() : ""))
+    .then((text) => { for (const r of text ? parseCSV(text) : []) (reports[r.id] = reports[r.id] || []).push(r); })
+    .catch(() => {});
+
+  loadReports.then(() => fetch("../data/cartes.csv?v=" + Date.now()))
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then((text) => {
+      cards = parseCSV(text);
+      const nRep = Object.keys(reports).length;
+      if (nRep) { $("filter").value = "reported"; setStatus(`${nRep} card(s) reported in game. Filter: “Reported in game”.`); }
+      const fromHash = location.hash.slice(1);
+      const i = cards.findIndex((c) => c.id === fromHash);
+      idx = i >= 0 ? i : Math.max(0, cards.findIndex(matches));
+      renderChanges();
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    })
+    .catch(() => {
+      $("oeuvre").textContent = "Can't read data/cartes.csv";
+      $("song").textContent = "Run the local server from the project root: python3 -m http.server 8000";
+    });
+</script>
+</body>
+</html>

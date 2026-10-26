@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<title>Vinyline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #17141c;
+    --velvet: #221e28;
+    --velvet2: #2c2733;
+    --line: #3a3442;
+    --film: #0f0d12;
+    --paper: #efe5cf;
+    --ink: #2a2420;
+    --ink-soft: #6f6556;
+    --muted: #9a92a6;
+    --text: #f4efe6;
+    --bulb: #f2c14e;
+    --ok: #79c98a;
+    --bad: #ef7d6d;
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --body: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--night); color: var(--text);
+    font: 16px/1.4 var(--body);
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  body.dragging { overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+  button { font: inherit; cursor: pointer; color: inherit; }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 2px solid var(--bulb); outline-offset: 2px; }
+
+  /* Rejoindre */
+  .join { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 24px 20px; max-width: 420px; margin: 0 auto; }
+  .joinlogo { display: block; width: 96px; height: 96px; margin: 0 auto 14px; }
+  .join h1 { font-family: var(--display); font-weight: 900; font-size: 46px; line-height: 1; margin: 0 0 10px; color: var(--bulb); }
+  .join p { color: var(--muted); margin: 0 0 24px; }
+  .join input {
+    font: inherit; font-size: 18px; width: 100%; padding: 14px 16px;
+    background: var(--velvet); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
+  }
+  .btn {
+    display: block; width: 100%; margin-top: 12px; padding: 15px; border: none; border-radius: 12px;
+    background: var(--bulb); color: #1d1606; font-weight: 700; font-size: 17px;
+  }
+  .btn:disabled { opacity: 0.4; }
+  .btn.ghostbtn { background: transparent; color: var(--muted); border: 1px solid var(--line); margin-top: 8px; padding: 11px; font-size: 15px; font-weight: 500; }
+  .err { color: var(--bad); min-height: 1.4em; margin-top: 10px; font-size: 14px; }
+
+  /* En-tête : moi */
+  .top {
+    position: sticky; top: 0; z-index: 5; background: rgba(23,20,28,0.96);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    padding: 12px 16px 10px; border-bottom: 1px solid var(--line);
+  }
+  .me { display: flex; align-items: center; gap: 10px; }
+  .me .bar-c { width: 6px; height: 26px; border-radius: 3px; flex: none; }
+  .me .name { font-family: var(--display); font-weight: 900; font-size: 26px; line-height: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .me .wallet { margin-left: auto; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  .coins { display: inline-flex; gap: 3px; }
+  .coin {
+    width: 18px; height: 18px; border-radius: 50%; flex: none;
+    background: radial-gradient(circle at 35% 30%, #ffe39a, var(--bulb) 55%, #b98a1f);
+    box-shadow: inset 0 0 0 2px rgba(120,80,0,0.35);
+  }
+  .coin.sm { width: 14px; height: 14px; }
+  .wallet .none { color: var(--muted); font-weight: 500; font-size: 14px; }
+
+  /* Onglets joueurs */
+  .tabs { display: flex; gap: 8px; overflow-x: auto; margin-top: 12px; padding-bottom: 2px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .ptab {
+    flex: none; position: relative; display: flex; flex-direction: column; gap: 3px; min-width: 96px;
+    padding: 7px 12px 7px 14px; border-radius: 12px; background: var(--velvet); border: 1.5px solid var(--line); text-align: left;
+  }
+  .ptab::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0; background: var(--c); }
+  .ptab.sel { border-color: var(--text); background: var(--velvet2); }
+  .ptab.playing { box-shadow: 0 0 0 3px rgba(242,193,78,0.35); }
+  .ptab.off { opacity: 0.55; }
+  .ptab .nm { font-weight: 700; font-size: 14px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .ptab .now { font-size: 11px; font-weight: 700; color: #1d1606; background: var(--bulb); border-radius: 999px; padding: 0 6px; }
+  .ptab .meta { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .ptab .meta b { font-family: var(--display); font-size: 17px; color: var(--text); font-weight: 700; }
+  .ptab .meta .tk { display: inline-flex; align-items: center; gap: 4px; }
+
+  .banner .btext { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .banner .bside { flex: none; display: flex; align-items: center; gap: 6px; padding-top: 2px; }
+  .banner .theme { font-family: var(--body); font-weight: 800; font-size: 14px; border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+  .banner { display: flex; align-items: flex-start; gap: 10px; margin: 2px 0 12px; font-family: var(--display); font-weight: 900; font-size: 26px; line-height: 1.05; }
+  .clock { flex: none; white-space: nowrap; font-family: var(--body); font-size: 15px; font-weight: 800; color: #1d1606; background: var(--bulb); border-radius: 999px; padding: 4px 11px; font-variant-numeric: tabular-nums; }
+  .clock.hurry { background: var(--bad); color: #fff; }
+  .swaprow { display: flex; justify-content: flex-end; margin: -2px 0 12px; }
+  .swap {
+    display: inline-flex; align-items: center; gap: 8px; padding: 7px 8px 7px 12px; border-radius: 999px;
+    background: var(--velvet); border: 1.5px solid var(--line); font-size: 14px; font-weight: 600;
+  }
+  .swap .coin { width: 16px; height: 16px; }
+  .swap .cost { font-size: 12px; font-weight: 700; color: var(--muted); background: var(--night); border-radius: 999px; padding: 2px 8px; }
+  .swap.armed { border-color: var(--bulb); background: rgba(242,193,78,0.12); }
+  .swap.armed .cost { color: #1d1606; background: var(--bulb); }
+  .clue { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -4px 0 14px; }
+  .clue .theme { font-weight: 800; font-size: 14px; border-radius: 999px; padding: 4px 12px; }
+  .clue .warn { font-size: 13px; font-weight: 600; color: #f3a78f; }
+  .clockbar { height: 4px; background: var(--velvet2); border-radius: 2px; margin: -4px 0 14px; overflow: hidden; }
+  .clockbar i { display: block; height: 100%; background: var(--bulb); transition: width 0.15s linear; }
+  .again { display: inline-flex; align-items: baseline; gap: 6px; margin-bottom: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--velvet); font-size: 14px; }
+  .again b { font-family: var(--display); font-size: 18px; color: var(--bulb); }
+  .tray { justify-content: center; }
+
+  /* Révélation plein écran */
+
+  /* Bandeau de début de tour */
+  .intro { position: fixed; inset: 0; z-index: 65; display: flex; align-items: center; justify-content: center; background: rgba(10,8,12,0.45); }
+  .intro .band {
+    width: 100%; text-align: center; padding: 30px 20px 34px; background: var(--velvet);
+    border-top: 5px solid var(--t, var(--bulb)); border-bottom: 5px solid var(--t, var(--bulb));
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .intro .iwho { font-family: var(--display); font-weight: 900; font-size: var(--introSize, 34px); line-height: 1.05; overflow-wrap: anywhere; }
+  .intro .iwho b { color: var(--p, var(--bulb)); }
+  .intro .ith { display: inline-block; margin-top: 14px; font-weight: 800; font-size: var(--introTheme, 20px); border-radius: 999px; padding: 6px 24px; }
+  .intro .iwarn { margin-top: 12px; font-weight: 700; color: #f3a78f; font-size: 16px; }
+  .intro.run { animation: introfade 8s ease forwards; }
+  .intro.run .band { animation: introband 8s ease forwards; }
+  @keyframes introfade { 0% { opacity: 0; } 4% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes introband { 0% { transform: scaleY(0.4); } 5% { transform: scaleY(1); } 100% { transform: scaleY(1); } }
+  @media (prefers-reduced-motion: reduce) { .intro.run .band { animation: none; } }
+  /* Bandeau de victoire */
+  .win { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: rgba(10,8,12,0.7); overflow: hidden; cursor: pointer; animation: winfade 0.5s ease both; }
+  .win .band {
+    position: relative; z-index: 1; width: 100%; text-align: center; padding: 34px 20px 38px; background: var(--velvet);
+    border-top: 6px solid var(--p, var(--bulb)); border-bottom: 6px solid var(--p, var(--bulb));
+    box-shadow: 0 20px 80px rgba(0,0,0,0.7); animation: winband 0.7s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  .win .wk { font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--bulb); font-size: var(--winK, 16px); }
+  .win .wn { font-family: var(--display); font-weight: 900; font-size: var(--winSize, 56px); line-height: 1.05; margin-top: 8px; overflow-wrap: anywhere; }
+  .win .wn b { color: var(--p, var(--bulb)); }
+  .win .ws { margin-top: 12px; color: var(--muted); font-size: 16px; }
+  .win .wclose { margin-top: 18px; color: var(--muted); font-size: 13px; }
+  .win .cf { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: confetti linear forwards; }
+  @keyframes winfade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes winband { from { transform: scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes confetti { to { transform: translateY(110vh) rotate(720deg); } }
+  @media (prefers-reduced-motion: reduce) { .win .band { animation: none; } .win .cf { display: none; } }
+  .win { --winSize: 38px; --winK: 14px; }
+
+
+  .rv { position: fixed; inset: 0; z-index: 70; background: rgba(12,10,15,0.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; perspective: 1200px; }
+  .rv-card { position: relative; width: min(84vw, 340px); aspect-ratio: 4 / 5; transform-style: preserve-3d; }
+  .rv-card.go { animation: cardflip 0.9s cubic-bezier(.2,.7,.2,1) 0.25s both; }
+  @keyframes cardflip { from { transform: rotateY(180deg) scale(0.9); } to { transform: rotateY(0) scale(1); } }
+  .rv-face { position: absolute; inset: 0; border-radius: 18px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .rv-back { transform: rotateY(180deg); background: var(--velvet2); border: 4px solid var(--c); display: grid; place-items: center; font-family: var(--display); font-weight: 900; font-size: 140px; color: var(--c); }
+  .rv-front {
+    background: var(--paper); color: var(--ink); border-top: 12px solid var(--c);
+    display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 24px 20px; gap: 6px;
+  }
+  .rv-year { font-family: var(--display); font-weight: 900; font-size: 92px; line-height: 0.9; }
+  .rv-title { font-weight: 800; font-size: 24px; line-height: 1.15; }
+  .rv-song { font-size: 17px; margin-top: 8px; }
+  .rv-artist { font-size: 15px; color: var(--ink-soft); }
+  .rv-theme { margin-top: 10px; font-size: 13px; font-weight: 800; border-radius: 999px; padding: 3px 12px; }
+  .rv-card.go .rv-theme { animation-delay: 2.5s; }
+  .rv-card.go .rv-front > * { opacity: 0; animation: rise 0.5s ease forwards; }
+  .rv-card.go .rv-year { animation-delay: 0.9s; }
+  .rv-card.go .rv-title { animation-delay: 1.5s; }
+  .rv-card.go .rv-song { animation-delay: 2.0s; }
+  .rv-card.go .rv-artist { animation-delay: 2.3s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .rv-verdict { font-family: var(--display); font-weight: 900; font-size: 34px; text-align: center; opacity: 0; animation: rise 0.5s ease 2.7s forwards; }
+  .rv-verdict.ok { color: var(--ok); }
+  .rv-verdict.ko { color: var(--bad); }
+  .rv-close { color: var(--muted); font-size: 13px; }
+  @media (prefers-reduced-motion: reduce) { .rv-card.go, .rv-card.go .rv-front > *, .rv-verdict { animation-duration: 0.01s !important; animation-delay: 0s !important; } }
+  .banner small { display: block; font-weight: 400; font-size: 14px; color: var(--muted); margin-top: 1px; }
+
+  main { padding: 14px 16px 140px; max-width: 520px; margin: 0 auto; }
+  .tl-title { color: var(--muted); font-size: 14px; margin: 4px 0 10px; }
+
+  /* Carte mystère / jeton à glisser */
+  .tray {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding: 12px; border-radius: 14px;
+    border: 1.5px dashed #4a4352; background: rgba(242,193,78,0.05);
+  }
+  .tray .hint { color: var(--muted); font-size: 14px; line-height: 1.35; }
+  .mystery, .tokenchip { flex: none; touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; }
+  .mystery {
+    width: 76px; height: 76px; border-radius: 12px; display: grid; place-items: center;
+    background: var(--paper); color: var(--ink); border: 5px solid var(--c, var(--bulb));
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.45);
+    font-family: var(--display); font-size: 44px; font-weight: 900; box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    animation: wiggle 2.4s ease-in-out infinite;
+  }
+  @keyframes wiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-5deg); } 90% { transform: rotate(5deg); } 95% { transform: rotate(-3deg); } }
+  @media (prefers-reduced-motion: reduce) { .mystery { animation: none; } }
+  .tokenchip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 999px;
+    background: var(--velvet2); border: 2px solid var(--bulb); font-weight: 700; box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  }
+  .tokenchip .coin { width: 22px; height: 22px; }
+  .floating { position: fixed; z-index: 50; pointer-events: none; transform: translate(-50%, -50%) scale(1.06); animation: none !important; box-shadow: 0 14px 34px rgba(0,0,0,0.6); }
+
+  /* Frise : pellicule verticale */
+  .film { position: relative; background: var(--film); border-radius: 16px; padding: 12px 28px; }
+  .film::before, .film::after {
+    content: ""; position: absolute; top: 10px; bottom: 10px; width: 10px; border-radius: 3px;
+    background: repeating-linear-gradient(180deg, transparent 0 8px, #2b2631 8px 20px, transparent 20px 28px);
+  }
+  .film::before { left: 9px; }
+  .film::after { right: 9px; }
+  .film-end { text-align: center; color: var(--muted); font-size: 13px; padding: 4px 0 8px; }
+  .film-end.bottom { padding: 8px 0 4px; }
+  .axis { position: relative; display: flex; flex-direction: column-reverse; }
+
+  .ticket {
+    position: relative; display: flex; align-items: stretch; background: var(--paper); color: var(--ink);
+    border-radius: 10px; min-height: 74px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    -webkit-mask: radial-gradient(circle 7px at 84px 0, transparent 98%, #000) top / 100% 51% no-repeat,
+                  radial-gradient(circle 7px at 84px 100%, transparent 98%, #000) bottom / 100% 51% no-repeat;
+            mask: radial-gradient(circle 7px at 84px 0, transparent 98%, #000) top / 100% 51% no-repeat,
+                  radial-gradient(circle 7px at 84px 100%, transparent 98%, #000) bottom / 100% 51% no-repeat;
+  }
+  .ticket .stub {
+    flex: none; width: 84px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    border-right: 2px dashed rgba(42,36,32,0.28);
+  }
+  .ticket .stub i { width: 40px; height: 6px; border-radius: 3px; background: var(--c); }
+  .ticket .y { font-family: var(--display); font-weight: 900; font-size: 32px; line-height: 1; }
+  .ticket .info { flex: 1; min-width: 0; padding: 9px 12px; display: flex; flex-direction: column; justify-content: center; }
+  .ticket .t { font-weight: 700; font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+  .ticket .s { color: var(--ink-soft); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ticket .a { color: var(--ink-soft); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ticket.new { animation: drop 0.8s ease; }
+  .ticket .won { position: absolute; top: 6px; right: 8px; font-size: 12px; font-weight: 700; color: #10240f; background: var(--ok); border-radius: 999px; padding: 1px 8px; }
+  @keyframes drop { from { transform: translateX(-14px); opacity: 0; } }
+
+  .zone { position: relative; display: flex; align-items: center; min-height: 12px; transition: min-height 0.15s ease; }
+  .zone .lbl { position: relative; z-index: 1; width: 100%; text-align: center; font-size: 14px; color: var(--muted); opacity: 0; transition: opacity 0.15s; }
+  .zone.open { min-height: 48px; }
+  .zone.open .lbl { opacity: 1; }
+  .zone.open::after { content: ""; position: absolute; inset: 6px 0; border: 1.5px dashed #4a4352; border-radius: 10px; }
+  .zone.hot { min-height: 66px; }
+  .zone.hot::after { border-color: var(--bulb); background: rgba(242,193,78,0.1); }
+  .zone.hot .lbl { color: var(--bulb); font-weight: 700; }
+  .zone.taken::after { display: none; }
+  .zone.correct { min-height: 44px; }
+  .zone.correct::after { content: ""; position: absolute; inset: 6px 0; border: 2px solid var(--ok); border-radius: 10px; background: rgba(121,201,138,0.08); }
+  .zone.correct .lbl { color: var(--ok); font-weight: 700; opacity: 1; }
+  .zone .items { display: grid; gap: 6px; flex: 1; padding: 6px 0; position: relative; z-index: 1; }
+
+  .ghost {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
+    background: rgba(242,193,78,0.07); border: 2.5px dashed var(--c, var(--bulb)); font-weight: 700; font-size: 15px;
+  }
+  .ghost .q {
+    flex: none; width: 44px; height: 44px; border-radius: 8px; display: grid; place-items: center;
+    background: var(--paper); color: var(--ink); border: 3px solid var(--c, var(--bulb)); font-family: var(--display); font-weight: 900; font-size: 30px;
+  }
+  .ghost .sub { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .ghost.drag { touch-action: none; cursor: grab; }
+  .ghost.lifted { opacity: 0.3; }
+  .claim {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px;
+    border: 2px solid var(--c); font-size: 14px; font-weight: 600; background: var(--velvet);
+  }
+  .claim.mine-armed { border-style: dashed; }
+  .ok-tag { margin-left: auto; color: var(--ok); font-weight: 800; }
+  .ko-tag { margin-left: auto; color: var(--bad); font-weight: 800; }
+
+  .reveal { background: var(--velvet); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+  .reveal .y { font-family: var(--display); font-size: 48px; font-weight: 900; color: var(--bulb); line-height: 1; }
+  .reveal .t { font-weight: 700; font-size: 18px; margin-top: 4px; }
+  .reveal .s { color: var(--muted); font-size: 14px; }
+  .reveal .r { margin-top: 8px; font-weight: 700; }
+
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(transparent, var(--night) 28%);
+  }
+  .bar .inner { max-width: 520px; margin: 0 auto; }
+  .bar .hint { text-align: center; color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .leave { display: block; margin: 30px auto 0; background: none; border: none; color: var(--muted); font-size: 13px; text-decoration: underline; }
+  .toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 60; background: #3d2422; color: #ffd9d2; padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: 90vw; }
+  .over { text-align: center; padding: 10px 0 14px; font-family: var(--display); font-size: 40px; font-weight: 900; color: var(--bulb); }
+</style>
+</head>
+<body>
+
+<section class="join" id="loadView" hidden>
+  <img class="joinlogo" src="/logo.svg" alt="">
+  <h1>Vinyline</h1>
+  <p id="loadMsg">Connexion à la partie…</p>
+  <button class="btn ghostbtn" id="loadReset" hidden>Rejoindre avec un autre pseudo</button>
+</section>
+
+<section class="join" id="joinView" hidden>
+  <img class="joinlogo" src="/logo.svg" alt="">
+  <h1>Vinyline</h1>
+  <p>Films, séries, jeux vidéo et musique. Choisis un pseudo pour rejoindre la partie.</p>
+  <input id="nameInput" maxlength="20" placeholder="Ton pseudo" autocomplete="off" autocapitalize="words">
+  <button class="btn" id="joinBtn">Rejoindre</button>
+  <div class="err" id="joinErr"></div>
+</section>
+
+<section id="gameView" hidden>
+  <div class="top">
+    <div class="me">
+      <span class="bar-c" id="meDot"></span>
+      <span class="name" id="meName"></span>
+      <span class="wallet" id="meWallet"></span>
+    </div>
+    <div class="tabs" id="chips"></div>
+  </div>
+  <main>
+    <div class="banner" id="banner"><span class="btext" id="bannerText"></span><span class="bside"><span class="theme" id="clueTheme" hidden></span><span class="clock" id="clock" hidden><span id="clockN"></span> s</span></span></div>
+    <div class="clockbar" id="clockbar" hidden><i id="clockFill"></i></div>
+    <div class="swaprow" id="swapRow" hidden><button class="swap" id="swapBtn"><span class="coin"></span><span id="swapTxt">Changer de musique</span><span class="cost">1 jeton</span></button></div>
+    <div class="clue" id="clue" hidden><span class="warn" id="clueWarn">Chanson reprise : c'est l'année de l'œuvre qui compte</span></div>
+    <div id="revealBox"></div>
+    <div id="tray"></div>
+
+    <div class="film">
+      <div class="film-end">▲ plus récent</div>
+      <div class="axis" id="timeline"></div>
+      <div class="film-end bottom">▼ plus ancien</div>
+    </div>
+    <button class="leave" id="leaveBtn">Quitter la partie</button>
+  </main>
+  <div class="bar" id="bar" hidden>
+    <div class="inner">
+      <button class="btn" id="barBtn"></button>
+      <button class="btn ghostbtn" id="barBtn2" hidden></button>
+      <div class="hint" id="barHint"></div>
+    </div>
+  </div>
+</section>
+
+<div class="rv" id="revealOverlay" hidden>
+  <div class="rv-card" id="rvCard">
+    <div class="rv-face rv-back">?</div>
+    <div class="rv-face rv-front">
+      <div class="rv-year" id="rvYear"></div>
+      <div class="rv-title" id="rvTitle"></div>
+      <div class="rv-song" id="rvSong"></div>
+      <div class="rv-artist" id="rvArtist"></div>
+      <div class="rv-theme" id="rvTheme"></div>
+    </div>
+  </div>
+  <div class="rv-verdict" id="rvVerdict"></div>
+  <div class="rv-close">Touche l'écran pour fermer</div>
+</div>
+
+<div class="win" id="win" hidden>
+  <div class="band"><div class="wk" id="winK">Victoire</div><div class="wn" id="winName"></div><div class="ws" id="winSub"></div><div class="wclose" id="winClose"></div></div>
+</div>
+<div class="intro" id="intro" hidden>
+  <div class="band"><div class="iwho" id="introWho"></div><div class="ith" id="introTheme"></div><div class="iwarn" id="introWarn" hidden>Chanson reprise : c'est l'année de l'œuvre qui compte</div></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const KEY = "vinyline-player";
+
+  let me = null;          // { pid, secret }
+  let state = null;
+  let es = null;
+  let viewing = null;     // joueur dont on regarde la frise (null = automatique)
+  let lastActive = null;
+  let armed = null;       // emplacement choisi pour une contestation, pas encore confirmé
+  let localPlacement;     // placement affiché tout de suite, avant la réponse du serveur
+  let lastCount = {};
+  let drag = null;        // glisser-déposer en cours
+  let pendingRender = false;
+
+  function loadMe() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { return null; } }
+  function saveMe(v) { try { v ? localStorage.setItem(KEY, JSON.stringify(v)) : localStorage.removeItem(KEY); } catch (e) {} }
+
+  function toast(msg) {
+    $("toast").textContent = msg; $("toast").hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(() => { $("toast").hidden = true; }, 3000);
+  }
+  async function post(url, body) {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "Erreur");
+    return j;
+  }
+  async function act(type, extra = {}) {
+    try { await post("/api/action", { pid: me.pid, secret: me.secret, type, ...extra }); return true; }
+    catch (e) { toast(e.message); return false; }
+  }
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  // ---------- Rejoindre ----------
+
+  function showJoin() { $("gameView").hidden = true; $("loadView").hidden = true; $("joinView").hidden = false; $("nameInput").focus(); }
+  function showLoading(msg, canReset) {
+    $("gameView").hidden = true; $("joinView").hidden = true; $("loadView").hidden = false;
+    $("loadMsg").textContent = msg;
+    $("loadReset").hidden = !canReset;
+  }
+  $("loadReset").onclick = () => { if (es) es.close(); saveMe(null); me = null; showJoin(); };
+
+  $("joinBtn").onclick = async () => {
+    const name = $("nameInput").value.trim();
+    if (!name) return;
+    $("joinBtn").disabled = true; $("joinErr").textContent = "";
+    try { me = await post("/api/join", { name }); saveMe(me); connect(); }
+    catch (e) { $("joinErr").textContent = e.message; }
+    finally { $("joinBtn").disabled = false; }
+  };
+  $("nameInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinBtn").click(); });
+  $("intro").addEventListener("animationend", (e) => { if (e.target === $("intro")) $("intro").hidden = true; });
+  $("intro").onclick = () => { $("intro").hidden = true; };
+  // ---------- Bandeau de victoire ----------
+  // Affiché une fois par partie, juste après la révélation de la carte gagnante
+  let winShown = null, winTimer = null;
+  function maybeWin(s, meId) {
+    if (s.phase !== "over" || !s.winner) { if (s.phase !== "over") winShown = null; return; }
+    const key = s.winner + ":" + s.cardNo;
+    if (winShown === key) return;
+    winShown = key;
+    clearTimeout(winTimer);
+    winTimer = setTimeout(() => {
+      const w = byId(s.winner);
+      if (!w) return;
+      const o = $("win");
+      o.style.setProperty("--p", w.color);
+      $("winName").innerHTML = "";
+      if (meId && w.id === meId) $("winName").append("Tu as gagné !");
+      else { const b = document.createElement("b"); b.textContent = w.name; $("winName").append(b, " gagne la partie !"); }
+      const others = s.players.filter((p) => p.id !== w.id).sort((a, b) => b.timeline.length - a.timeline.length);
+      $("winSub").textContent = `${w.timeline.length} cartes` + (others.length ? ` · ${others.map((p) => `${p.name} ${p.timeline.length}`).join(" · ")}` : "");
+      $("winClose").textContent = meId ? "Touche l'écran pour fermer" : "Clique pour fermer";
+      o.querySelectorAll(".cf").forEach((n) => n.remove());
+      const colors = [w.color, "#f2c14e", "#e5484d", "#4fa3e8", "#4cbf73", "#9b6bea", "#e05bb5"];
+      for (let i = 0; i < 70; i++) {
+        const c = document.createElement("span");
+        c.className = "cf";
+        c.style.left = Math.random() * 100 + "%";
+        c.style.background = colors[i % colors.length];
+        c.style.animationDuration = 2.5 + Math.random() * 3 + "s";
+        c.style.animationDelay = Math.random() * 1.5 + "s";
+        o.append(c);
+      }
+      $("revealOverlay").hidden = true;  // la carte a déjà été vue, un seul appui pour revenir au jeu
+      o.hidden = false;
+    }, 3500);
+  }
+  $("win").onclick = () => { $("win").hidden = true; };
+
+  $("revealOverlay").onclick = () => { $("revealOverlay").hidden = true; clearTimeout(revealTimer); };
+  $("leaveBtn").onclick = async () => {
+    if (!confirm("Quitter la partie ? Ta frise sera perdue.")) return;
+    await act("leave");
+    if (es) es.close();
+    saveMe(null); me = null; state = null;
+    showJoin();
+  };
+
+  // ---------- Connexion ----------
+
+  function connect() {
+    if (es) es.close();
+    let errors = 0;
+    es = new EventSource(`/events?pid=${encodeURIComponent(me.pid)}&secret=${encodeURIComponent(me.secret)}`);
+    es.onmessage = (e) => {
+      errors = 0;
+      state = JSON.parse(e.data);
+      if (state.now) clockOffset = state.now - Date.now();
+      localPlacement = undefined;
+      $("joinView").hidden = true; $("loadView").hidden = true; $("gameView").hidden = false;
+      render();
+    };
+    es.onerror = async () => {
+      errors++;
+      // Un refus du serveur (joueur inconnu) ferme le flux pour de bon : il faut vérifier tout de suite
+      const closed = es.readyState === EventSource.CLOSED;
+      if (!closed && errors < 2) return;
+      try {
+        await post("/api/action", { pid: me.pid, secret: me.secret, type: "ping" });
+        if (closed) setTimeout(() => { if (me) connect(); }, 1500);
+      } catch (e) {
+        if (/inconnu/i.test(e.message)) {
+          es.close(); saveMe(null); me = null; showJoin();
+          $("joinErr").textContent = "La partie a été relancée : rejoins à nouveau.";
+        } else {
+          if (!state) showLoading("Serveur injoignable. Vérifie le Wi-Fi (et coupe le VPN).", true);
+          if (closed) setTimeout(() => { if (me) connect(); }, 3000);
+        }
+      }
+    };
+  }
+
+  // ---------- Libellés chronologiques ----------
+
+  function zoneLabel(tl, i) {
+    if (!tl.length) return "Ici";
+    if (i === 0) return `Avant ${tl[0].year}`;
+    if (i === tl.length) return `Après ${tl[tl.length - 1].year}`;
+    const a = tl[i - 1].year, b = tl[i].year;
+    return a === b ? `En ${a}` : `Entre ${a} et ${b}`;
+  }
+
+  // ---------- Affichage ----------
+
+  const byId = (id) => state.players.find((p) => p.id === id);
+
+  function ctx() {
+    const s = state;
+    const mine = byId(s.me);
+    const active = s.activeId ? byId(s.activeId) : null;
+    const isActive = !!(active && mine && active.id === mine.id);
+    const myChallenge = s.challenges.find((c) => c.pid === s.me);
+    const placement = localPlacement !== undefined ? localPlacement : s.placement;
+    return { s, mine, active, isActive, myChallenge, placement };
+  }
+
+  function render() {
+    if (drag) { pendingRender = true; return; }
+    const c = ctx();
+    const { s, mine, active, isActive, myChallenge, placement } = c;
+    if (!mine) { saveMe(null); showJoin(); return; }
+
+    if (s.activeId !== lastActive || s.cardNo !== render.card) { viewing = null; armed = null; lastActive = s.activeId; render.card = s.cardNo; }
+    if (s.phase !== "challenge") armed = null;
+    const shown = (viewing && byId(viewing)) || active || mine;
+    c.shown = shown;
+
+    // En-tête
+    $("meDot").style.background = mine.color;
+    $("meName").textContent = mine.name;
+    const wallet = $("meWallet"); wallet.innerHTML = "";
+    if (mine.tokens > 0) {
+      const cs = el("span", "coins");
+      for (let i = 0; i < mine.tokens; i++) cs.append(el("span", "coin"));
+      wallet.append(cs, `${mine.tokens} jeton${mine.tokens > 1 ? "s" : ""}`);
+    } else wallet.append(el("span", "none", "aucun jeton"));
+
+    // Bandeau : juste à qui c'est le tour, et le chrono quand on peut contester
+    let title = "";
+    if (s.phase === "lobby") title = "En attente du lancement";
+    else if (s.phase === "over") { const w = s.winner ? byId(s.winner) : null; title = w ? (w.id === mine.id ? "Tu as gagné !" : `${w.name} a gagné !`) : "Partie terminée"; }
+    else title = isActive ? "C'est mon tour" : `C'est au tour de ${active.name}`;
+    $("bannerText").textContent = title;
+    $("clock").hidden = !(s.phase === "challenge" && s.deadline);
+    $("clueTheme").hidden = !(s.clue && s.clue.category);
+    $("clue").hidden = !(s.clue && s.clue.reprise);
+    if (s.clue) {
+      $("clueTheme").textContent = SINGULAR[s.clue.category] || s.clue.category;
+      paintTheme($("clueTheme"), s.clue.category);
+    }
+    // Changer de musique contre un jeton : seulement à son tour, avant de valider
+    const canSwap = s.phase === "placing" && isActive && mine.tokens > 0;
+    $("swapRow").hidden = !canSwap;
+    if (!canSwap) disarmSwap();
+    maybeWin(s, mine.id);
+    if (active) maybeIntro(s, isActive ? "C'est mon tour" : "C'est au tour de ", isActive ? "" : active.name, active.color);
+    tickClock();
+
+    // Joueurs
+    const chips = $("chips"); chips.innerHTML = "";
+    for (const p of s.players) {
+      const ch = el("button", "ptab");
+      ch.style.setProperty("--c", p.color);
+      if (p.id === shown.id) ch.classList.add("sel");
+      if (p.id === s.activeId && !["lobby", "over"].includes(s.phase)) ch.classList.add("playing");
+      if (!p.online) ch.classList.add("off");
+      const nm = el("span", "nm", p.id === mine.id ? "Moi" : p.name);
+      if (p.id === s.activeId && !["lobby", "over"].includes(s.phase)) nm.append(el("span", "now", "joue"));
+      const meta = el("span", "meta");
+      const sc = el("span"); sc.append(el("b", "", String(p.timeline.length)), `/${s.settings.target}`);
+      const tk = el("span", "tk"); tk.append(el("span", "coin sm"), String(p.tokens));
+      meta.append(sc, tk);
+      ch.append(nm, meta);
+      ch.onclick = () => { viewing = p.id; render(); };
+      chips.append(ch);
+    }
+
+    // Révélation : animation plein écran une fois, puis un rappel discret
+    const rb = $("revealBox"); rb.innerHTML = "";
+    if (s.phase === "over" && s.winner) rb.append(el("div", "over", s.winner === mine.id ? "Tu as gagné !" : `Victoire de ${byId(s.winner).name}`));
+    if (s.revealed && s.result) {
+      if (revealShown !== s.cardNo) { revealShown = s.cardNo; showReveal(s, mine); }
+      const again = el("button", "again");
+      again.append(el("b", "", String(s.revealed.year)), " ", s.revealed.title);
+      again.onclick = () => showReveal(s, mine);
+      rb.append(again);
+    }
+
+    renderTray(c);
+    renderTimeline(c);
+    renderBar(c);
+    for (const p of s.players) lastCount[p.id] = p.timeline.length;
+  }
+
+  // Ce qu'on peut glisser : la carte « ? » (joueur actif) ou un jeton (contestation)
+  function canPlace(c) { return c.s.phase === "placing" && c.isActive && c.shown.id === c.mine.id; }
+  function canChallenge(c) {
+    return c.s.phase === "challenge" && !c.isActive && !c.myChallenge && c.mine.tokens > 0 && c.active && c.shown.id === c.active.id;
+  }
+
+  // Une couleur par thème : fond de la pastille et texte lisible dessus
+  const THEME = {
+    "Films":          { bg: "#f5c84a", fg: "#2a1f00" },
+    "Jeux vidéo":     { bg: "#9b6bea", fg: "#ffffff" },
+    "Séries TV":      { bg: "#4fa3e8", fg: "#06233d" },
+    "Manga/Anime":    { bg: "#e5484d", fg: "#ffffff" },
+    "Dessins animés": { bg: "#4cbf73", fg: "#062a12" },
+    "Disney/Pixar":   { bg: "#2f4fa8", fg: "#ffffff" },
+    "Musique":        { bg: "#e05bb5", fg: "#ffffff" },
+  };
+  const themeOf = (cat) => THEME[cat] || { bg: "#8a867e", fg: "#111111" };
+  function paintTheme(node, cat) {
+    const t = themeOf(cat);
+    node.style.background = t.bg;
+    node.style.color = t.fg;
+  }
+  const SINGULAR = { "Manga/Anime": "Anime", "Dessins animés": "Dessin animé", "Films": "Film", "Disney/Pixar": "Disney/Pixar", "Jeux vidéo": "Jeu vidéo", "Séries TV": "Série TV", "Musique": "Musique" };
+  // ---------- Changer de musique (jeton) ----------
+  // Deux appuis pour éviter de dépenser un jeton par erreur : le premier arme le bouton 4 s
+  let swapArmed = false, swapTimer = null;
+  function disarmSwap() {
+    swapArmed = false; clearTimeout(swapTimer);
+    $("swapBtn").classList.remove("armed");
+    $("swapTxt").textContent = "Changer de musique";
+  }
+  $("swapBtn").onclick = async () => {
+    if (!swapArmed) {
+      swapArmed = true;
+      $("swapBtn").classList.add("armed");
+      $("swapTxt").textContent = "Confirmer le changement";
+      swapTimer = setTimeout(disarmSwap, 4000);
+      return;
+    }
+    disarmSwap();
+    localPlacement = undefined;
+    await act("swap");
+  };
+
+  // ---------- Bandeau de début de tour (5 s) ----------
+  let introShown = -1;
+  function maybeIntro(s, whoText, playerName, playerColor) {
+    if (s.phase !== "placing" || !s.clue || introShown === s.cardNo) return;
+    introShown = s.cardNo;
+    const o = $("intro");
+    $("introWho").innerHTML = "";
+    if (playerName) { const b = document.createElement("b"); b.textContent = playerName; $("introWho").append(whoText, b); }
+    else $("introWho").append(whoText);
+    o.style.setProperty("--p", playerColor || "var(--bulb)");
+    o.style.setProperty("--t", themeOf(s.clue.category).bg);
+    $("introTheme").textContent = SINGULAR[s.clue.category] || s.clue.category;
+    paintTheme($("introTheme"), s.clue.category);
+    $("introWarn").hidden = !s.clue.reprise;
+    o.hidden = false;
+    o.classList.remove("run"); void o.offsetWidth; o.classList.add("run");
+  }
+
+  // ---------- Animation de révélation ----------
+  let revealShown = -1, revealTimer = null;
+  function verdictFor(s, mine) {
+    const w = s.result.winner ? byId(s.result.winner) : null;
+    if (s.result.how === "swap") { const b = byId(s.result.by); return { ok: false, text: b && b.id === mine.id ? "Musique changée, à toi de rejouer" : `${b ? b.name : "?"} change de musique` }; }
+    if (!w) return { ok: false, text: "Personne n'a trouvé" };
+    if (s.result.how === "active") return { ok: true, text: w.id === mine.id ? "Bien placé, la carte est à toi !" : `${w.name} a juste !` };
+    return { ok: true, text: w.id === mine.id ? "Ton jeton gagne la carte !" : `${w.name} gagne la carte avec son jeton` };
+  }
+  function showReveal(s, mine) {
+    const o = $("revealOverlay");
+    const active = s.activeId ? byId(s.activeId) : null;
+    o.style.setProperty("--c", themeOf(s.revealed.category).bg);
+    $("rvTheme").textContent = SINGULAR[s.revealed.category] || s.revealed.category || "";
+    paintTheme($("rvTheme"), s.revealed.category);
+    $("rvYear").textContent = String(s.revealed.year);
+    $("rvTitle").textContent = s.revealed.title;
+    $("rvSong").textContent = s.revealed.song;
+    $("rvArtist").textContent = s.revealed.artist;
+    const v = verdictFor(s, mine);
+    $("rvVerdict").textContent = v.text;
+    $("rvVerdict").className = "rv-verdict " + (s.result.how === "swap" ? "" : v.ok ? "ok" : "ko");
+    o.hidden = false;
+    const card = $("rvCard");
+    card.classList.remove("go"); void card.offsetWidth; card.classList.add("go");
+    clearTimeout(revealTimer);
+    revealTimer = setTimeout(() => { o.hidden = true; }, 8000);
+  }
+
+  // ---------- Chrono de contestation ----------
+  let clockOffset = 0;
+  function tickClock() {
+    const s = state;
+    const on = !!(s && s.phase === "challenge" && s.deadline);
+    $("clockbar").hidden = !on;
+    if (!on) return;
+    const total = (s.settings.challenge_seconds || 10) * 1000;
+    const leftMs = Math.max(0, s.deadline - (Date.now() + clockOffset));
+    $("clockN").textContent = String(Math.ceil(leftMs / 1000));
+    $("clock").classList.toggle("hurry", leftMs <= 3000);
+    $("clockFill").style.width = `${Math.min(100, (leftMs / total) * 100)}%`;
+  }
+  setInterval(tickClock, 150);
+
+  function renderTray(c) {
+    const tray = $("tray"); tray.innerHTML = "";
+    if (canPlace(c) && c.placement == null) {
+      const box = el("div", "tray");
+      const m = el("div", "mystery", "?");
+      m.style.setProperty("--c", c.s.clue ? themeOf(c.s.clue.category).bg : c.mine.color);
+      m.addEventListener("pointerdown", (e) => startDrag(e, "place", m));
+      box.append(m);
+      tray.append(box);
+    } else if (canChallenge(c) && armed == null) {
+      const box = el("div", "tray");
+      const t = el("div", "tokenchip");
+      t.append(el("span", "coin"), "Mon jeton");
+      t.addEventListener("pointerdown", (e) => startDrag(e, "challenge", t));
+      box.append(t);
+      tray.append(box);
+    }
+  }
+
+  function renderTimeline(c) {
+    const { s, mine, active, shown, placement } = c;
+    const tl = shown.timeline;
+    const box = $("timeline"); box.innerHTML = "";
+
+
+    const isActiveTl = !!(active && shown.id === active.id && ["placing", "challenge", "reveal"].includes(s.phase));
+    // Si le joueur actif a gagné la carte, elle est déjà dans sa frise : on la montre à sa place,
+    // et on recale les jetons des autres (leurs emplacements étaient comptés sans elle)
+    const ins = isActiveTl && s.result && s.revealed && s.result.how === "active" ? tl.findIndex((x) => x.id === s.revealed.id) : -1;
+    const mapSlot = (x) => (ins < 0 || x < ins ? x : x + 1);
+    const correct = ins < 0 && s.phase === "reveal" && isActiveTl && s.result ? s.result.correct : [];
+    const placementAt = ins < 0 ? placement : null;
+    const prev = lastCount[shown.id];
+
+    for (let i = 0; i <= tl.length; i++) {
+      const z = el("div", "zone");
+      z.dataset.slot = i;
+      const items = el("div", "items");
+
+      if (isActiveTl && placementAt === i) {
+        const g = el("div", "ghost");
+        g.style.setProperty("--c", s.clue ? themeOf(s.clue.category).bg : (s.revealed ? themeOf(s.revealed.category).bg : active.color));
+        const label = el("span");
+        label.append(active.id === s.me ? "Ma position" : `Position de ${active.name}`, el("span", "sub", zoneLabel(tl, i)));
+        g.append(el("span", "q", "?"), label);
+        if (s.phase === "placing") g.classList.add("pulse");
+        if (canPlace(c)) {
+          g.classList.add("drag");
+          g.addEventListener("pointerdown", (e) => startDrag(e, "place", g));
+        }
+        if (s.phase === "reveal" && s.result) g.append(el("span", correct.includes(i) ? "ok-tag" : "ko-tag", correct.includes(i) ? "Juste" : "Faux"));
+        items.append(g);
+      }
+      if (isActiveTl) {
+        for (const ch of s.challenges.filter((x) => mapSlot(x.slot) === i)) {
+          const p = byId(ch.pid);
+          const k = el("div", "claim");
+          k.style.setProperty("--c", p ? p.color : "#666");
+          k.append(el("span", "coin"), `Jeton de ${ch.pid === s.me ? "moi" : ch.name}`);
+          if (s.phase === "reveal" && s.result) k.append(el("span", correct.includes(i) ? "ok-tag" : "ko-tag", correct.includes(i) ? "Juste" : "Faux"));
+          items.append(k);
+        }
+        if (armed === i && s.phase === "challenge") {
+          const k = el("div", "claim mine-armed");
+          k.style.setProperty("--c", mine.color);
+          k.append(el("span", "coin"), "Mon jeton (à confirmer)");
+          items.append(k);
+        }
+      }
+
+      if (items.childElementCount) { z.append(items); z.classList.add("taken"); }
+      else {
+        z.append(el("span", "lbl", zoneLabel(tl, i)));
+        if (correct.includes(i)) { z.classList.add("correct"); z.querySelector(".lbl").textContent = "Bonne position : " + zoneLabel(tl, i).toLowerCase(); }
+      }
+      // Toucher un emplacement marche aussi, en plus du glisser-déposer
+      if (!items.childElementCount && (canPlace(c) || (canChallenge(c) && armed == null))) {
+        z.classList.add("open");
+        z.onclick = () => drop(canPlace(c) ? "place" : "challenge", i);
+      }
+      box.append(z);
+
+      if (i < tl.length) {
+        const card = tl[i];
+        const n = el("div", "ticket");
+        n.style.setProperty("--c", themeOf(card.category).bg);
+        const stub = el("div", "stub"); stub.append(el("span", "y", String(card.year)), el("i"));
+        const body = el("div", "info");
+        body.append(el("div", "t", card.title), el("div", "s", card.song), el("div", "a", card.artist));
+        n.append(stub, body);
+        if (s.revealed && card.id === s.revealed.id && prev != null && tl.length > prev) n.classList.add("new");
+        if (i === ins) n.append(el("span", "won", "Bien placé"));
+        box.append(n);
+      }
+    }
+  }
+
+  function renderBar(c) {
+    const { s, isActive, placement, active, mine } = c;
+    const bar = $("bar");
+    bar.hidden = true; $("barBtn2").hidden = true;
+    if (s.phase === "placing" && isActive && placement != null) {
+      bar.hidden = false;
+      $("barBtn").textContent = "Valider ma position";
+      $("barBtn").disabled = false;
+      $("barBtn").onclick = () => act("confirm");
+      $("barHint").textContent = `${zoneLabel(mine.timeline, placement)}, tu peux encore la déplacer`;
+    } else if (s.phase === "challenge" && armed != null && active) {
+      bar.hidden = false;
+      $("barBtn").textContent = `Contester : ${zoneLabel(active.timeline, armed).toLowerCase()} (1 jeton)`;
+      $("barBtn").onclick = async () => { const slot = armed; armed = null; render(); await act("challenge", { slot }); };
+      $("barBtn2").hidden = false;
+      $("barBtn2").textContent = "Annuler";
+      $("barBtn2").onclick = () => { armed = null; render(); };
+      $("barHint").textContent = "";
+    } else if (s.phase === "reveal" && s.nextId && (isActive || s.nextId === mine.id)) {
+      // Le joueur du tour ou le suivant lance la suite, sans passer par l'ordi
+      const swap = s.result && s.result.how === "swap";
+      const mineNext = s.nextId === mine.id;
+      bar.hidden = false;
+      $("barBtn").textContent = swap ? (mineNext ? "Lancer ma nouvelle musique" : "Nouvelle musique") : (mineNext ? "C'est à moi, lancer mon tour" : "Tour suivant");
+      $("barBtn").disabled = false;
+      $("barBtn").onclick = async () => { $("barBtn").disabled = true; if (!(await act("next"))) $("barBtn").disabled = false; };
+      $("barHint").textContent = swap || mineNext ? "" : `Au tour de ${(byId(s.nextId) || {}).name || "?"}`;
+    } else if (canChallengeElsewhere(c)) {
+      bar.hidden = false;
+      $("barBtn").textContent = `Voir la frise de ${active.name} pour contester`;
+      $("barBtn").onclick = () => { viewing = active.id; render(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      $("barHint").textContent = "";
+    }
+  }
+  function canChallengeElsewhere(c) {
+    return c.s.phase === "challenge" && !c.isActive && !c.myChallenge && c.mine.tokens > 0 && c.active && c.shown.id !== c.active.id;
+  }
+
+  // ---------- Glisser-déposer ----------
+
+  function freeZones(kind) {
+    const zones = [...document.querySelectorAll("#timeline .zone")];
+    return zones.filter((z) => kind === "place" ? !z.querySelector(".claim") : !z.classList.contains("taken"));
+  }
+
+  function startDrag(e, kind, source) {
+    if (e.button != null && e.button !== 0) return;
+    e.preventDefault();
+    const floating = source.cloneNode(true);
+    floating.classList.add("floating");
+    floating.style.width = source.getBoundingClientRect().width + "px";
+    floating.style.left = e.clientX + "px";
+    floating.style.top = e.clientY + "px";
+    document.body.append(floating);
+    source.classList.add("lifted");
+    document.body.classList.add("dragging");
+    const zones = freeZones(kind);
+    zones.forEach((z) => { z.classList.add("open"); z.classList.remove("taken"); });
+    if (kind === "place") {
+      // Pendant le déplacement, l'emplacement d'origine redevient une zone libre
+      document.querySelectorAll("#timeline .zone .ghost").forEach((g) => { const z = g.closest(".zone"); if (!zones.includes(z)) zones.push(z); z.classList.add("open"); });
+    }
+    drag = { kind, floating, source, zones, slot: null, y: e.clientY, raf: 0 };
+    try { source.setPointerCapture(e.pointerId); } catch (err) {}
+    source.addEventListener("pointermove", onMove);
+    source.addEventListener("pointerup", onUp);
+    source.addEventListener("pointercancel", onCancel);
+    highlight(e.clientY);
+    drag.raf = requestAnimationFrame(autoScroll);
+  }
+
+  function onMove(e) {
+    if (!drag) return;
+    drag.floating.style.left = e.clientX + "px";
+    drag.floating.style.top = e.clientY + "px";
+    drag.y = e.clientY;
+    highlight(e.clientY);
+  }
+
+  function highlight(y) {
+    let best = null, bestD = Infinity;
+    for (const z of drag.zones) {
+      const r = z.getBoundingClientRect();
+      const d = Math.abs((r.top + r.bottom) / 2 - y);
+      if (d < bestD) { bestD = d; best = z; }
+    }
+    // Trop loin de la frise (dans le bandeau du haut) : pas de cible
+    const tlRect = $("timeline").getBoundingClientRect();
+    if (y < tlRect.top - 60 || y > tlRect.bottom + 60) best = null;
+    drag.zones.forEach((z) => z.classList.toggle("hot", z === best));
+    drag.slot = best ? Number(best.dataset.slot) : null;
+  }
+
+  function autoScroll() {
+    if (!drag) return;
+    const edge = 80, h = window.innerHeight;
+    if (drag.y < edge + 120) window.scrollBy(0, -8);
+    else if (drag.y > h - edge) window.scrollBy(0, 8);
+    highlight(drag.y);
+    drag.raf = requestAnimationFrame(autoScroll);
+  }
+
+  function endDrag() {
+    const d = drag;
+    cancelAnimationFrame(d.raf);
+    d.floating.remove();
+    d.source.classList.remove("lifted");
+    d.source.removeEventListener("pointermove", onMove);
+    d.source.removeEventListener("pointerup", onUp);
+    d.source.removeEventListener("pointercancel", onCancel);
+    document.body.classList.remove("dragging");
+    drag = null;
+    return d;
+  }
+  function onUp() {
+    const d = endDrag();
+    if (d.slot != null) drop(d.kind, d.slot);
+    else { pendingRender = false; render(); }
+  }
+  function onCancel() { endDrag(); pendingRender = false; render(); }
+
+  async function drop(kind, slot) {
+    pendingRender = false;
+    if (kind === "place") {
+      localPlacement = slot;   // affichage immédiat, le serveur confirme ensuite
+      render();
+      const ok = await act("place", { slot });
+      if (!ok) { localPlacement = undefined; render(); }
+    } else {
+      armed = slot;
+      render();
+    }
+  }
+
+  // ---------- Démarrage ----------
+
+  me = loadMe();
+  if (me) {
+    showLoading("Connexion à la partie…", false);
+    connect();
+    // Filet de sécurité : jamais d'écran vide si rien n'arrive
+    setTimeout(() => { if (!state && me) showLoading("La connexion prend du temps…", true); }, 6000);
+  } else showJoin();
+</script>
+</body>
+</html>

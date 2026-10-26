@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="/logo.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vinyline · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #17141c;      /* salle obscure */
+    --velvet: #221e28;     /* fauteuils */
+    --velvet2: #2c2733;
+    --line: #3a3442;
+    --paper: #efe5cf;      /* ticket */
+    --ink: #2a2420;
+    --ink-soft: #6f6556;
+    --muted: #9a92a6;
+    --text: #f4efe6;
+    --bulb: #f2c14e;       /* ampoules de marquise */
+    --ok: #79c98a;
+    --bad: #ef7d6d;
+    --disc: #1d1a22;
+    --groove: #2a2630;
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --body: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--night); color: var(--text); font: 15px/1.45 var(--body); }
+  [hidden] { display: none !important; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--bulb); outline-offset: 2px; }
+
+  .btn {
+    background: var(--velvet2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 14px; font-weight: 500;
+  }
+  .btn:hover { border-color: #5a5266; }
+  .btn.primary { background: var(--bulb); color: #1d1606; border-color: var(--bulb); font-weight: 700; }
+  .btn.big { padding: 12px 22px; font-size: 16px; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 18px 20px 40px; }
+
+  /* Barre du haut */
+  .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 900; font-size: 26px; letter-spacing: 0.02em; color: var(--bulb); }
+  .brand .logo { width: 34px; height: 34px; }
+  .deck { color: var(--muted); font-size: 14px; }
+  .topbar .right { margin-left: auto; display: flex; gap: 8px; }
+
+  /* Onglets joueurs */
+  .tabs { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; margin-bottom: 14px; scrollbar-width: thin; }
+  .ptab {
+    flex: none; min-width: 190px; background: var(--velvet); border: 1.5px solid var(--line); border-radius: 14px;
+    padding: 10px 12px 10px 14px; text-align: left; position: relative; color: var(--text);
+  }
+  .ptab::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; border-radius: 0 4px 4px 0; background: var(--c); }
+  .ptab.sel { border-color: var(--text); background: var(--velvet2); }
+  .ptab.playing { box-shadow: 0 0 0 3px rgba(242,193,78,0.35); }
+  .ptab .row1 { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
+  .ptab .row1 .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+  .ptab .now { font-size: 12px; font-weight: 600; color: #1d1606; background: var(--bulb); border-radius: 999px; padding: 1px 8px; }
+  .ptab .off { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .ptab .row2 { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+  .score { font-family: var(--display); font-weight: 700; font-size: 22px; line-height: 1; }
+  .score small { font-size: 15px; color: var(--muted); }
+  .tok { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+  .tok .step {
+    width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line); background: var(--night);
+    display: grid; place-items: center; font-size: 16px; line-height: 1; padding: 0; color: var(--text);
+  }
+  .tok .step:hover { border-color: var(--bulb); }
+  .tok .n { font-weight: 700; min-width: 14px; text-align: center; }
+  .coin {
+    width: 18px; height: 18px; border-radius: 50%; flex: none;
+    background: radial-gradient(circle at 35% 30%, #ffe39a, var(--bulb) 55%, #b98a1f);
+    box-shadow: inset 0 0 0 2px rgba(120,80,0,0.35);
+  }
+  .ptab .kick { position: absolute; top: 6px; right: 6px; background: none; border: none; color: var(--muted); font-size: 13px; padding: 2px 6px; opacity: 0; }
+  .ptab:hover .kick { opacity: 1; }
+
+  /* Platine : grand disque central */
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 6px 0 4px; }
+  .turnline { font-family: var(--display); font-weight: 900; font-size: 40px; line-height: 1.05; text-align: center; }
+  .turnline .nm { color: var(--c, var(--bulb)); }
+  .turntable { --D: clamp(280px, 46vh, 460px); position: relative; width: var(--D); height: var(--D); }
+  .ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); cursor: pointer; }
+  .ring circle { fill: none; stroke-width: 2.6; }
+  .ring .rtrack { stroke: #2b2631; }
+  .ring .rprog { stroke: var(--c, var(--bulb)); stroke-linecap: round; transition: stroke-dashoffset 0.3s linear; }
+  .ring .rhit { stroke: transparent; stroke-width: 9; }
+  .platter {
+    position: absolute; inset: 5.5%; border-radius: 50%;
+    background:
+      radial-gradient(circle, transparent 0 31%, rgba(255,255,255,0.05) 31.3%, transparent 32%),
+      conic-gradient(from 20deg, rgba(255,255,255,0.08), transparent 12%, transparent 45%, rgba(255,255,255,0.06) 55%, transparent 68%),
+      repeating-radial-gradient(circle, #1d1a22 0 2px, #26222c 2px 3.5px);
+    box-shadow: 0 22px 60px rgba(0,0,0,0.6), inset 0 0 0 2px #0c0a0e;
+  }
+  .platter.spin { animation: spin 3.6s linear infinite; }
+  @keyframes spin { to { rotate: 360deg; } }
+  @media (prefers-reduced-motion: reduce) { .platter.spin { animation: none; } }
+  .label {
+    position: absolute; inset: 21%; border-radius: 50%; background: var(--paper); color: var(--ink);
+    border: 5px solid var(--c, var(--bulb)); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 8%; overflow: hidden;
+    box-shadow: inset 0 0 0 6px rgba(42,36,32,0.06);
+  }
+  .label::after { content: ""; position: absolute; width: 4%; aspect-ratio: 1; border-radius: 50%; background: var(--night); top: 48%; left: 48%; opacity: 0.0; }
+  .label .big { font-family: var(--display); font-weight: 900; font-size: calc(var(--D) * 0.2); line-height: 0.9; }
+  .label .cap { font-size: calc(var(--D) * 0.036); color: var(--ink-soft); margin-top: 4px; }
+  .label .yr { font-family: var(--display); font-weight: 900; font-size: calc(var(--D) * 0.15); line-height: 0.95; }
+  .label .ov { font-weight: 800; font-size: calc(var(--D) * 0.05); line-height: 1.15; margin-top: 4px; overflow-wrap: anywhere; }
+  .label .sg { font-size: calc(var(--D) * 0.036); margin-top: 6px; line-height: 1.2; overflow-wrap: anywhere; }
+  .label .ar { font-size: calc(var(--D) * 0.031); color: var(--ink-soft); margin-top: 2px; overflow-wrap: anywhere; }
+  .label.flip { animation: flip 0.7s ease both; }
+  @keyframes flip { 0% { transform: rotateY(90deg); } 100% { transform: rotateY(0); } }
+  .label.flip > * { opacity: 0; animation: rise 0.5s ease forwards; }
+  .label.flip > :nth-child(1) { animation-delay: 0.55s; }
+  .label.flip > :nth-child(2) { animation-delay: 1.15s; }
+  .label.flip > :nth-child(3) { animation-delay: 1.65s; }
+  .label.flip > :nth-child(4) { animation-delay: 1.95s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .label.count .big { color: var(--ink); }
+  .label .theme { margin-top: 6px; font-weight: 800; font-size: calc(var(--D) * 0.045); background: var(--c, var(--bulb)); color: #1d1606; border-radius: 999px; padding: 2px 14px; }
+  .label .theme.sm { font-size: calc(var(--D) * 0.03); padding: 1px 10px; }
+  .label.flip > :nth-child(5) { animation-delay: 2.2s; }
+  .label .warn { margin-top: 6px; font-size: calc(var(--D) * 0.032); color: #a3361f; font-weight: 700; }
+  .label.count.hurry .big { color: #c0392b; }
+  .verdict { min-height: 30px; font-size: 22px; font-weight: 800; text-align: center; }
+  .verdict.ok { color: var(--ok); }
+  .verdict.ko { color: var(--bad); }
+  .verdict.show { animation: verdict 0.6s ease 2.2s both; }
+  @keyframes verdict { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+  .transport { display: flex; align-items: center; gap: 16px; }
+  .round {
+    width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--line); background: var(--velvet2); color: var(--text);
+    display: grid; place-items: center; padding: 0; font-size: 13px; font-weight: 700;
+  }
+  .round:hover { border-color: var(--bulb); }
+  .round.main { width: 72px; height: 72px; background: var(--bulb); color: #1d1606; border-color: var(--bulb); }
+  .round svg { width: 44%; height: 44%; fill: currentColor; }
+  .round.main svg { width: 34%; height: 34%; }
+  .round .lbl10 { display: flex; align-items: center; gap: 1px; }
+  .time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; min-width: 96px; text-align: center; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .notice { color: var(--bulb); font-size: 14px; text-align: center; }
+  .msg { color: var(--muted); font-size: 14px; text-align: center; min-height: 1.2em; }
+
+  /* Frise : pellicule de cinéma */
+  .tl-head { display: flex; align-items: center; gap: 10px; margin: 22px 0 10px; }
+  .tl-head h2 { font-size: 18px; margin: 0; font-weight: 700; }
+  .tl-head .dir { color: var(--muted); font-size: 14px; }
+  .tl-head .nav { margin-left: auto; display: flex; gap: 6px; }
+  .tl-head .nav .btn { padding: 6px 12px; }
+  .strip {
+    position: relative; background: #0f0d12; border-radius: 14px; padding: 30px 0;
+    overflow-x: auto; scroll-behavior: smooth; scrollbar-width: thin;
+  }
+  .strip::before, .strip::after {
+    content: ""; position: sticky; display: block; left: 0; height: 0;
+  }
+  .track { position: relative; display: flex; align-items: stretch; gap: 0; padding: 0 22px; min-width: max-content; }
+  /* Perforations en haut et en bas de la pellicule */
+  .track::before, .track::after {
+    content: ""; position: absolute; left: 0; right: 0; height: 12px;
+    background: repeating-linear-gradient(90deg, transparent 0 10px, #2b2631 10px 24px, transparent 24px 34px);
+    border-radius: 3px;
+  }
+  .track::before { top: -22px; }
+  .track::after { bottom: -22px; }
+  .end { flex: none; align-self: center; color: var(--muted); font-size: 13px; padding: 0 14px; writing-mode: vertical-rl; transform: rotate(180deg); }
+
+  .ticket {
+    flex: none; width: 172px; background: var(--paper); color: var(--ink); border-radius: 10px;
+    display: flex; flex-direction: column; position: relative; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    -webkit-mask: radial-gradient(circle 8px at 0 64px, transparent 98%, #000) left / 51% 100% no-repeat,
+                  radial-gradient(circle 8px at 100% 64px, transparent 98%, #000) right / 51% 100% no-repeat;
+            mask: radial-gradient(circle 8px at 0 64px, transparent 98%, #000) left / 51% 100% no-repeat,
+                  radial-gradient(circle 8px at 100% 64px, transparent 98%, #000) right / 51% 100% no-repeat;
+  }
+  .ticket .stub { height: 64px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 2px dashed rgba(42,36,32,0.28); }
+  .ticket .stub i { width: 10px; height: 34px; border-radius: 4px; background: var(--c); flex: none; }
+  .ticket .y { font-family: var(--display); font-weight: 900; font-size: 40px; line-height: 1; letter-spacing: 0.01em; }
+  .ticket .info { padding: 10px 14px 12px; }
+  .ticket .t { font-weight: 700; font-size: 15px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .ticket .s { color: var(--ink-soft); font-size: 13px; line-height: 1.3; margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ticket .a { color: var(--ink-soft); font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ticket.new { animation: drop 0.8s ease; }
+  .ticket .won { position: absolute; top: 8px; right: 10px; font-size: 12px; font-weight: 700; color: #10240f; background: var(--ok); border-radius: 999px; padding: 1px 8px; }
+  @keyframes drop { from { transform: translateY(-14px); opacity: 0; } }
+
+  .gap { flex: none; width: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; }
+  .gap.has { width: auto; padding: 0 12px; }
+  .gap.correct { width: 40px; }
+  .gap.correct::before { content: "ici"; color: var(--ok); font-weight: 700; font-size: 13px; }
+  .gap.correct::after { content: ""; width: 4px; height: 110px; background: var(--ok); border-radius: 2px; }
+  .mystery {
+    width: 150px; border: 2.5px dashed var(--c); border-radius: 10px; padding: 12px 12px 14px; text-align: center;
+    background: rgba(242,193,78,0.06);
+  }
+  .mystery .q { font-family: var(--display); font-weight: 900; font-size: 44px; color: var(--c); line-height: 1; }
+  .mystery .l { font-size: 13px; color: var(--text); margin-top: 4px; }
+  .mystery .w { font-size: 12px; color: var(--muted); }
+  .mystery.ok { border-style: solid; border-color: var(--ok); }
+  .mystery.ko { opacity: 0.55; }
+  .claim { display: flex; align-items: center; gap: 8px; border: 2px solid var(--c); border-radius: 999px; padding: 5px 12px 5px 6px; font-size: 13px; font-weight: 600; white-space: nowrap; background: var(--velvet); }
+  .claim.ok { border-color: var(--ok); }
+  .claim.ko { opacity: 0.5; text-decoration: line-through; }
+  .empty { color: var(--muted); padding: 10px 22px; }
+
+  /* Salle d'attente */
+  .lobby { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 4px; }
+  @media (max-width: 860px) { .lobby { grid-template-columns: 1fr; } }
+  .panel { background: var(--velvet); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; }
+  .panel h2 { margin: 0 0 14px; font-size: 18px; }
+  .joinbox { display: flex; gap: 18px; align-items: center; }
+  .qr { background: #fff; border-radius: 12px; padding: 10px; line-height: 0; flex: none; }
+  .qr svg { width: 180px; height: 180px; }
+  .url { font-family: var(--display); font-weight: 700; font-size: 26px; word-break: break-all; color: var(--bulb); }
+  .hint { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .settings { display: grid; grid-template-columns: 1fr auto; gap: 10px 14px; align-items: center; }
+  .settings input { width: 76px; padding: 6px 8px; background: var(--night); border: 1px solid var(--line); border-radius: 8px; }
+  .start { margin-top: 18px; }
+
+  /* Thèmes */
+  .themes { grid-column: 1 / -1; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px; border-radius: 999px;
+    border: 1.5px solid var(--line); background: var(--night); font-weight: 600; font-size: 15px;
+  }
+  .chip .n { color: var(--muted); font-weight: 500; font-size: 13px; }
+  .chip .tdot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .chip.on .tdot { box-shadow: 0 0 0 2px rgba(255,255,255,0.7); }
+  .chip:hover { border-color: #5a5266; }
+  .chip.on { background: var(--bulb); color: #1d1606; border-color: var(--bulb); }
+  .chip.on .n { color: inherit; opacity: 0.7; }
+  .chip:disabled { opacity: 0.4; cursor: default; }
+  .themes h3 { font-size: 15px; margin: 18px 0 10px; font-weight: 700; }
+  .themes h3 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+  .poolinfo { margin-top: 16px; color: var(--muted); }
+  .poolinfo b { color: var(--text); font-family: var(--display); font-size: 22px; }
+
+
+  /* Bandeau de début de tour */
+  .intro { position: fixed; inset: 0; z-index: 65; display: flex; align-items: center; justify-content: center; background: rgba(10,8,12,0.45); }
+  .intro .band {
+    width: 100%; text-align: center; padding: 30px 20px 34px; background: var(--velvet);
+    border-top: 5px solid var(--t, var(--bulb)); border-bottom: 5px solid var(--t, var(--bulb));
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .intro .iwho { font-family: var(--display); font-weight: 900; font-size: var(--introSize, 52px); line-height: 1.05; overflow-wrap: anywhere; }
+  .intro .iwho b { color: var(--p, var(--bulb)); }
+  .intro .ith { display: inline-block; margin-top: 14px; font-weight: 800; font-size: var(--introTheme, 26px); border-radius: 999px; padding: 6px 24px; }
+  .intro .iwarn { margin-top: 12px; font-weight: 700; color: #f3a78f; font-size: 16px; }
+  .intro.run { animation: introfade 8s ease forwards; }
+  .intro.run .band { animation: introband 8s ease forwards; }
+  @keyframes introfade { 0% { opacity: 0; } 4% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes introband { 0% { transform: scaleY(0.4); } 5% { transform: scaleY(1); } 100% { transform: scaleY(1); } }
+  @media (prefers-reduced-motion: reduce) { .intro.run .band { animation: none; } }
+  /* Bandeau de victoire */
+  .win { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: rgba(10,8,12,0.7); overflow: hidden; cursor: pointer; animation: winfade 0.5s ease both; }
+  .win .band {
+    position: relative; z-index: 1; width: 100%; text-align: center; padding: 34px 20px 38px; background: var(--velvet);
+    border-top: 6px solid var(--p, var(--bulb)); border-bottom: 6px solid var(--p, var(--bulb));
+    box-shadow: 0 20px 80px rgba(0,0,0,0.7); animation: winband 0.7s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  .win .wk { font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--bulb); font-size: var(--winK, 16px); }
+  .win .wn { font-family: var(--display); font-weight: 900; font-size: var(--winSize, 56px); line-height: 1.05; margin-top: 8px; overflow-wrap: anywhere; }
+  .win .wn b { color: var(--p, var(--bulb)); }
+  .win .ws { margin-top: 12px; color: var(--muted); font-size: 16px; }
+  .win .wclose { margin-top: 18px; color: var(--muted); font-size: 13px; }
+  .win .cf { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: confetti linear forwards; }
+  @keyframes winfade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes winband { from { transform: scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes confetti { to { transform: translateY(110vh) rotate(720deg); } }
+  @media (prefers-reduced-motion: reduce) { .win .band { animation: none; } .win .cf { display: none; } }
+
+
+  /* Fenêtre « Inviter » */
+  .overlay { position: fixed; inset: 0; background: rgba(10,8,12,0.75); display: grid; place-items: center; z-index: 20; }
+  .overlay .panel { max-width: 560px; }
+  .btn.flagged { border-color: var(--bad); color: var(--bad); }
+  .rp-card { color: var(--muted); font-size: 14px; margin: -6px 0 14px; }
+  .rp-note { width: 100%; margin: 14px 0 4px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--night); color: inherit; font: inherit; }
+  .rp-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
+
+  .video-box { margin-top: 14px; aspect-ratio: 16/9; max-width: 480px; border-radius: 10px; overflow: hidden; background: #000; }
+  .video-box.hiddenvid { position: fixed; width: 240px; height: 135px; left: 0; bottom: 0; opacity: 0; pointer-events: none; z-index: -1; margin: 0; }
+  .video-box iframe, .video-box > div { width: 100%; height: 100%; }
+  .toast { position: fixed; right: 16px; bottom: 16px; background: #3d2422; color: #ffd9d2; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 30; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <span class="brand"><img class="logo" src="/logo.svg" alt="">Vinyline</span>
+    <span class="deck" id="deckInfo"></span>
+    <div class="right">
+      <button class="btn" id="inviteBtn" hidden>Inviter</button>
+      <button class="btn" id="toggleVideo" title="Utile pour passer une pub">Afficher la vidéo</button>
+      <button class="btn" id="resetBtn">Nouvelle partie</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <!-- Salle d'attente -->
+  <section class="lobby" id="lobby" hidden>
+    <div class="panel">
+      <h2>Rejoindre la partie</h2>
+      <div class="joinbox">
+        <div class="qr" id="qr"></div>
+        <div>
+          <div class="url" id="joinUrl">…</div>
+          <div class="hint">Même Wi-Fi que cet ordi, VPN coupé. Scanne le QR code ou tape l'adresse.</div>
+          <div class="hint" id="otherUrls" hidden></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Règles de la partie</h2>
+      <div class="settings">
+        <label for="sTarget">Cartes pour gagner</label><input type="number" id="sTarget" min="2" max="50">
+        <label for="sTokens">Jetons au départ</label><input type="number" id="sTokens" min="0" max="10">
+        <label for="sMax">Jetons maximum</label><input type="number" id="sMax" min="0" max="20">
+        <label for="sSecs">Secondes pour contester</label><input type="number" id="sSecs" min="0" max="60">
+      </div>
+      <div class="start"><button class="btn primary big" id="startBtn">Démarrer la partie</button></div>
+      <div class="hint" id="lobbyHint"></div>
+    </div>
+    <div class="panel themes">
+      <h2>Thèmes de la partie</h2>
+      <div class="chips" id="catChips"></div>
+      <div id="musicFilters" hidden>
+        <h3>Décennies <span>aucune cochée = toutes</span></h3>
+        <div class="chips" id="decChips"></div>
+        <h3 id="styleTitle">Styles <span>aucun coché = tous</span></h3>
+        <div class="chips" id="styleChips"></div>
+      </div>
+      <div class="poolinfo" id="poolInfo"></div>
+    </div>
+  </section>
+
+  <!-- Partie -->
+  <section id="game" hidden>
+    <div class="stage">
+      <div class="turnline" id="turnLine"></div>
+      <div class="msg" id="msg"></div>
+      <div class="turntable" id="deck">
+        <svg class="ring" id="ring" viewBox="0 0 100 100" aria-label="Position dans le morceau (clique pour avancer)">
+          <circle class="rtrack" cx="50" cy="50" r="48"></circle>
+          <circle class="rprog" id="rprog" cx="50" cy="50" r="48"></circle>
+          <circle class="rhit" cx="50" cy="50" r="48"></circle>
+        </svg>
+        <div class="platter" id="platter"></div>
+        <div class="label" id="label"></div>
+      </div>
+      <div class="verdict" id="verdict"></div>
+      <div class="transport">
+        <button class="round" data-skip="-10" aria-label="Reculer de 10 secondes"><span class="lbl10">−10</span></button>
+        <button class="round main" id="playBtn" aria-label="Lecture ou pause"></button>
+        <button class="round" data-skip="10" aria-label="Avancer de 10 secondes"><span class="lbl10">+10</span></button>
+      </div>
+      <div class="time" id="time">0:00 / 0:00</div>
+      <div class="actions" id="actions"></div>
+      <div class="notice" id="notice" hidden></div>
+    </div>
+
+    <div class="tl-head">
+      <h2 id="tlTitle"></h2>
+      <span class="dir">du plus ancien au plus récent</span>
+      <div class="nav">
+        <button class="btn" id="tlLeft" aria-label="Défiler vers les plus anciennes">‹</button>
+        <button class="btn" id="tlRight" aria-label="Défiler vers les plus récentes">›</button>
+      </div>
+    </div>
+    <div class="strip" id="strip"><div class="track" id="track"></div></div>
+  </section>
+
+  <div class="video-box hiddenvid" id="videoBox"><div id="yt"></div></div>
+</div>
+
+<div class="overlay" id="invite" hidden>
+  <div class="panel">
+    <h2>Inviter un joueur</h2>
+    <div class="joinbox">
+      <div class="qr" id="qr2"></div>
+      <div><div class="url" id="joinUrl2"></div><div class="hint">Il rejoint la partie en cours avec une carte et les jetons de départ.</div></div>
+    </div>
+    <div style="margin-top:16px; text-align:right"><button class="btn" id="inviteClose">Fermer</button></div>
+  </div>
+</div>
+<div class="win" id="win" hidden>
+  <div class="band"><div class="wk" id="winK">Victoire</div><div class="wn" id="winName"></div><div class="ws" id="winSub"></div><div class="wclose" id="winClose"></div></div>
+</div>
+<div class="intro" id="intro" hidden>
+  <div class="band"><div class="iwho" id="introWho"></div><div class="ith" id="introTheme"></div><div class="iwarn" id="introWarn" hidden>Chanson reprise : c'est l'année de l'œuvre qui compte</div></div>
+</div>
+<div class="overlay" id="reportDlg" hidden>
+  <div class="panel">
+    <h2>Signaler cette musique</h2>
+    <div class="rp-card" id="rpCard"></div>
+    <div class="chips" id="rpReasons"></div>
+    <input class="rp-note" id="rpNote" placeholder="Précision (facultatif) : bonne version, bon moment…" maxlength="300">
+    <div class="rp-actions">
+      <button class="btn" id="rpCancel">Annuler</button>
+      <button class="btn" id="rpSend">Signaler</button>
+      <button class="btn primary" id="rpSendSkip">Signaler et changer de musique</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let state = null, player = null, playerReady = false, loadedSeq = -1, dragging = false;
+  let selected = null, lastActive = null, lastPlacementKey = "";
+  const lastCount = {};
+
+  function toast(msg) {
+    $("toast").textContent = msg; $("toast").hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(() => { $("toast").hidden = true; }, 3500);
+  }
+  async function host(type, extra = {}) {
+    try {
+      const r = await fetch("/api/host", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, ...extra }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Erreur");
+      return j;
+    } catch (e) { toast(e.message); }
+  }
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const byId = (id) => state.players.find((p) => p.id === id);
+
+  // ---------- Signaler une musique à corriger ----------
+  // Écrit une ligne dans data/signalements.csv, à traiter ensuite avec tools/review.html
+  const REASONS = ["Mauvaise musique", "Mauvais départ", "Vidéo HS ou pub", "Infos fausses (titre, année…)", "Trop dur / pas reconnaissable", "Autre"];
+  let rpReason = null, rpPos = null;
+  function openReport() {
+    rpReason = null;
+    rpPos = playerReady ? Math.floor(player.getCurrentTime() || 0) : null;
+    const s = state;
+    $("rpCard").innerHTML = "";
+    $("rpCard").append(`Carte ${s.host.cardId}`, rpPos != null ? ` · signalée à ${fmt(rpPos)}` : "", s.host.reported ? " · déjà signalée" : "");
+    const R = $("rpReasons"); R.innerHTML = "";
+    for (const r of REASONS) {
+      const b = el("button", "chip", r);
+      b.onclick = () => { rpReason = r; [...R.children].forEach((x) => x.classList.toggle("on", x === b)); syncReport(); };
+      R.append(b);
+    }
+    $("rpNote").value = "";
+    $("rpSendSkip").hidden = !["placing", "challenge"].includes(s.phase);
+    syncReport();
+    $("reportDlg").hidden = false;
+  }
+  function syncReport() { $("rpSend").disabled = $("rpSendSkip").disabled = !rpReason; }
+  async function sendReport(skip) {
+    if (!rpReason) return;
+    $("reportDlg").hidden = true;
+    const ok = await host("report", { reason: rpReason, note: $("rpNote").value.trim(), position: rpPos });
+    if (!ok) return;
+    toast("Musique signalée, elle est notée dans data/signalements.csv");
+    if (skip) host("skip", { reason: "Musique signalée, nouvelle musique." });
+  }
+  $("rpCancel").onclick = () => { $("reportDlg").hidden = true; };
+  $("rpSend").onclick = () => sendReport(false);
+  $("rpSendSkip").onclick = () => sendReport(true);
+  $("reportDlg").onclick = (e) => { if (e.target === $("reportDlg")) $("reportDlg").hidden = true; };
+  function zoneLabel(tl, i) {
+    if (!tl.length) return "Première carte";
+    if (i === 0) return `Avant ${tl[0].year}`;
+    if (i === tl.length) return `Après ${tl[tl.length - 1].year}`;
+    const a = tl[i - 1].year, b = tl[i].year;
+    return a === b ? `En ${a}` : `Entre ${a} et ${b}`;
+  }
+
+  // ---------- Inviter (QR) ----------
+  function drawQR(target, url) {
+    try { const q = qrcode(0, "M"); q.addData(url); q.make(); $(target).innerHTML = q.createSvgTag({ cellSize: 4, margin: 1, scalable: true }); }
+    catch (e) { $(target).hidden = true; }
+  }
+  fetch("/info").then((r) => r.json()).then(({ url, others }) => {
+    $("joinUrl").textContent = url; $("joinUrl2").textContent = url;
+    drawQR("qr", url); drawQR("qr2", url);
+    if (others && others.length) { $("otherUrls").textContent = "Si ça ne charge pas, essaie : " + others.join(", "); $("otherUrls").hidden = false; }
+  });
+  $("intro").addEventListener("animationend", (e) => { if (e.target === $("intro")) $("intro").hidden = true; });
+  $("intro").onclick = () => { $("intro").hidden = true; };
+  // ---------- Bandeau de victoire ----------
+  // Affiché une fois par partie, juste après la révélation de la carte gagnante
+  let winShown = null, winTimer = null;
+  function maybeWin(s, meId) {
+    if (s.phase !== "over" || !s.winner) { if (s.phase !== "over") winShown = null; return; }
+    const key = s.winner + ":" + s.cardNo;
+    if (winShown === key) return;
+    winShown = key;
+    clearTimeout(winTimer);
+    winTimer = setTimeout(() => {
+      const w = byId(s.winner);
+      if (!w) return;
+      const o = $("win");
+      o.style.setProperty("--p", w.color);
+      $("winName").innerHTML = "";
+      if (meId && w.id === meId) $("winName").append("Tu as gagné !");
+      else { const b = document.createElement("b"); b.textContent = w.name; $("winName").append(b, " gagne la partie !"); }
+      const others = s.players.filter((p) => p.id !== w.id).sort((a, b) => b.timeline.length - a.timeline.length);
+      $("winSub").textContent = `${w.timeline.length} cartes` + (others.length ? ` · ${others.map((p) => `${p.name} ${p.timeline.length}`).join(" · ")}` : "");
+      $("winClose").textContent = meId ? "Touche l'écran pour fermer" : "Clique pour fermer";
+      o.querySelectorAll(".cf").forEach((n) => n.remove());
+      const colors = [w.color, "#f2c14e", "#e5484d", "#4fa3e8", "#4cbf73", "#9b6bea", "#e05bb5"];
+      for (let i = 0; i < 70; i++) {
+        const c = document.createElement("span");
+        c.className = "cf";
+        c.style.left = Math.random() * 100 + "%";
+        c.style.background = colors[i % colors.length];
+        c.style.animationDuration = 2.5 + Math.random() * 3 + "s";
+        c.style.animationDelay = Math.random() * 1.5 + "s";
+        o.append(c);
+      }
+      o.hidden = false;
+    }, 3500);
+  }
+  $("win").onclick = () => { $("win").hidden = true; };
+
+  $("inviteBtn").onclick = () => { $("invite").hidden = false; };
+  $("inviteClose").onclick = () => { $("invite").hidden = true; };
+  $("invite").onclick = (e) => { if (e.target === $("invite")) $("invite").hidden = true; };
+
+  // ---------- Lecteur YouTube ----------
+  const tag = document.createElement("script");
+  tag.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(tag);
+  window.onYouTubeIframeAPIReady = () => {
+    player = new YT.Player("yt", {
+      width: 480, height: 270,
+      playerVars: { playsinline: 1, controls: 1, rel: 0 },
+      events: {
+        onReady: () => { playerReady = true; syncPlayer(); },
+        onError: (e) => {
+          if (!state || !["placing", "challenge"].includes(state.phase)) return;
+          host("skip", { reason: e.data === 101 || e.data === 150 ? "Vidéo non lisible ici, nouvelle musique." : "Vidéo indisponible, nouvelle musique." });
+        },
+      },
+    });
+  };
+  function syncPlayer() {
+    if (!playerReady || !state || !state.host) return;
+    const h = state.host;
+    if (["placing", "challenge", "reveal"].includes(state.phase) && h.video && h.seq !== loadedSeq) {
+      loadedSeq = h.seq;
+      player.loadVideoById({ videoId: h.video, startSeconds: h.start || 0 });
+      setTimeout(() => {
+        if (player.getPlayerState() !== 1) { $("notice").textContent = "Le navigateur a bloqué la lecture automatique : clique sur Lecture."; $("notice").hidden = false; }
+      }, 2500);
+    }
+    if (state.phase === "lobby" && player.getPlayerState && player.getPlayerState() === 1) player.stopVideo();
+  }
+  const fmt = (t) => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); };
+  const isPlaying = () => playerReady && player.getPlayerState() === 1;
+  const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z"/></svg>';
+  const RING = 2 * Math.PI * 48;
+  $("rprog").style.strokeDasharray = RING;
+  $("rprog").style.strokeDashoffset = RING;
+  let lastIcon = "";
+  function refreshTime() {
+    const playing = isPlaying();
+    const icon = playing ? "pause" : "play";
+    if (icon !== lastIcon) { $("playBtn").innerHTML = playing ? ICON_PAUSE : ICON_PLAY; lastIcon = icon; }
+    $("platter").classList.toggle("spin", playing);
+    if (!playerReady) return;
+    const d = player.getDuration() || 0, t = player.getCurrentTime() || 0;
+    $("rprog").style.strokeDashoffset = d > 0 ? RING * (1 - Math.min(1, t / d)) : RING;
+    $("time").textContent = `${fmt(t)} / ${fmt(d)}`;
+    if (playing) $("notice").hidden = true;
+  }
+  setInterval(refreshTime, 300);
+  refreshTime();
+  $("playBtn").onclick = () => { if (playerReady) isPlaying() ? player.pauseVideo() : player.playVideo(); };
+  // Clic sur le cercle : aller à ce moment du morceau
+  $("ring").addEventListener("click", (e) => {
+    if (!playerReady) return;
+    const r = $("ring").getBoundingClientRect();
+    const ang = Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2));
+    const frac = ((ang + Math.PI / 2) / (2 * Math.PI) + 1) % 1;
+    const d = player.getDuration() || 0;
+    if (d > 0) { player.seekTo(frac * d, true); refreshTime(); }
+  });
+  document.querySelectorAll("[data-skip]").forEach((b) => b.onclick = () => { if (playerReady) player.seekTo(Math.max(0, player.getCurrentTime() + Number(b.dataset.skip)), true); });
+  $("toggleVideo").onclick = () => {
+    const hid = $("videoBox").classList.toggle("hiddenvid");
+    $("toggleVideo").textContent = hid ? "Afficher la vidéo" : "Masquer la vidéo";
+  };
+  $("resetBtn").onclick = () => { if (confirm("Recommencer une partie ? Les joueurs restent connectés.")) host("reset"); };
+  $("startBtn").onclick = () => host("start");
+  $("tlLeft").onclick = () => { $("strip").scrollBy({ left: -560 }); };
+  $("tlRight").onclick = () => { $("strip").scrollBy({ left: 560 }); };
+  document.addEventListener("keydown", (e) => {
+    if (!$("reportDlg").hidden) { if (e.key === "Escape") $("reportDlg").hidden = true; return; }
+    if (e.target.tagName === "INPUT") return;
+    if (e.key === " ") { e.preventDefault(); $("playBtn").click(); }
+    if (e.key === "Enter") { const p = document.querySelector("#actions .primary"); if (p) { e.preventDefault(); p.click(); } }
+  });
+  for (const [id, key] of [["sTarget", "target"], ["sTokens", "start_tokens"], ["sMax", "max_tokens"], ["sSecs", "challenge_seconds"]]) {
+    $(id).addEventListener("change", () => host("settings", { [key]: Number($(id).value) }));
+  }
+
+  // ---------- Affichage ----------
+  function render() {
+    const s = state;
+    const active = s.activeId ? byId(s.activeId) : null;
+    const inGame = s.phase !== "lobby";
+    if (s.activeId !== lastActive) { selected = null; lastActive = s.activeId; }
+    const shown = (selected && byId(selected)) || active || s.players[0];
+
+    $("deckInfo").textContent = inGame ? `Morceau ${s.cardNo}, ${s.deckLeft} cartes restantes` : `${s.host.totalCards} cartes prêtes`;
+    $("lobby").hidden = inGame;
+    $("game").hidden = !inGame;
+    $("inviteBtn").hidden = !inGame;
+
+    renderTabs(s, active, shown);
+
+    if (!inGame) {
+      renderThemes(s);
+      $("startBtn").disabled = !s.players.length || s.host.poolSize < s.players.length + 1;
+      $("lobbyHint").textContent = !s.players.length ? "Attends qu'au moins un joueur rejoigne."
+        : !s.host.filters.categories.length ? "Coche au moins un thème."
+        : `${s.players.length} joueur${s.players.length > 1 ? "s" : ""} prêt${s.players.length > 1 ? "s" : ""}.`;
+      for (const [id, key] of [["sTarget", "target"], ["sTokens", "start_tokens"], ["sMax", "max_tokens"], ["sSecs", "challenge_seconds"]]) if (document.activeElement !== $(id)) $(id).value = s.settings[key];
+      syncPlayer();
+      return;
+    }
+
+    renderDeck(s, active);
+
+    const A = $("actions"); A.innerHTML = "";
+    const add = (label, fn, primary, disabled) => { const b = el("button", "btn" + (primary ? " primary big" : ""), label); b.onclick = fn; b.disabled = !!disabled; A.append(b); };
+    if (s.phase === "placing") { add("Autre musique", () => host("skip", { reason: "Nouvelle musique." })); add("Passer le tour", () => host("skipTurn")); add("Révéler", () => host("reveal"), true, s.placement == null); }
+    if (s.phase === "challenge") { add("Autre musique", () => host("skip", { reason: "Nouvelle musique." })); add("Révéler", () => host("reveal"), true); }
+    if (s.phase === "reveal") add(s.result && s.result.how === "swap" ? "Nouvelle musique" : "Tour suivant", () => host("next"), true);
+    if (s.phase === "over") add("Rejouer", () => host("start"), true);
+    if (s.host && s.host.cardId && s.phase !== "lobby") {
+      add(s.host.reported ? "Signalée ⚑" : "Signaler ⚑", openReport);
+      A.lastChild.classList.toggle("flagged", !!s.host.reported);
+      A.lastChild.title = "Noter cette musique comme à corriger (mauvaise musique, mauvais départ…)";
+    }
+
+    renderStrip(s, active, shown);
+    for (const p of s.players) lastCount[p.id] = p.timeline.length;
+    syncPlayer();
+  }
+
+  // ---------- Thèmes ----------
+  function toggleFilter(kind, value) {
+    const f = state.host.filters;
+    const list = new Set(f[kind]);
+    list.has(value) ? list.delete(value) : list.add(value);
+    host("filters", { [kind]: [...list] });
+  }
+  function chipRow(target, items, kind, selected) {
+    const box = $(target); box.innerHTML = "";
+    for (const [name, count] of items) {
+      const b = el("button", "chip" + (selected.includes(name) ? " on" : ""));
+      const dot = el("span", "tdot");
+      if (kind === "categories") { dot.style.background = themeOf(name).bg; b.append(dot); }
+      b.append(name, el("span", "n", String(count)));
+      if (kind === "categories" && selected.includes(name)) paintTheme(b, name);
+      b.disabled = count === 0 && !selected.includes(name);
+      b.setAttribute("aria-pressed", selected.includes(name) ? "true" : "false");
+      b.onclick = () => toggleFilter(kind, name);
+      box.append(b);
+    }
+  }
+  function renderThemes(s) {
+    const info = s.host.tagInfo, f = s.host.filters;
+    chipRow("catChips", info.categories, "categories", f.categories);
+    const music = f.categories.includes("Musique");
+    $("musicFilters").hidden = !music;
+    if (music) {
+      chipRow("decChips", info.decades, "decades", f.decades);
+      $("styleTitle").hidden = !info.styles.length;
+      chipRow("styleChips", info.styles, "styles", f.styles);
+    }
+    const n = s.host.poolSize;
+    $("poolInfo").innerHTML = "";
+    if (!f.categories.length) $("poolInfo").append("Coche au moins un thème pour lancer la partie.");
+    else { $("poolInfo").append(el("b", "", String(n)), ` carte${n > 1 ? "s" : ""} dans la partie`); }
+  }
+
+  // Une couleur par thème : fond de la pastille et texte lisible dessus
+  const THEME = {
+    "Films":          { bg: "#f5c84a", fg: "#2a1f00" },
+    "Jeux vidéo":     { bg: "#9b6bea", fg: "#ffffff" },
+    "Séries TV":      { bg: "#4fa3e8", fg: "#06233d" },
+    "Manga/Anime":    { bg: "#e5484d", fg: "#ffffff" },
+    "Dessins animés": { bg: "#4cbf73", fg: "#062a12" },
+    "Disney/Pixar":   { bg: "#2f4fa8", fg: "#ffffff" },
+    "Musique":        { bg: "#e05bb5", fg: "#ffffff" },
+  };
+  const themeOf = (cat) => THEME[cat] || { bg: "#8a867e", fg: "#111111" };
+  function paintTheme(node, cat) {
+    const t = themeOf(cat);
+    node.style.background = t.bg;
+    node.style.color = t.fg;
+  }
+  const SINGULAR = { "Manga/Anime": "Anime", "Dessins animés": "Dessin animé", "Films": "Film", "Disney/Pixar": "Disney/Pixar", "Jeux vidéo": "Jeu vidéo", "Séries TV": "Série TV", "Musique": "Musique" };
+  // ---------- Bandeau de début de tour (5 s) ----------
+  let introShown = -1;
+  function maybeIntro(s, whoText, playerName, playerColor) {
+    if (s.phase !== "placing" || !s.clue || introShown === s.cardNo) return;
+    introShown = s.cardNo;
+    const o = $("intro");
+    $("introWho").innerHTML = "";
+    if (playerName) { const b = document.createElement("b"); b.textContent = playerName; $("introWho").append(whoText, b); }
+    else $("introWho").append(whoText);
+    o.style.setProperty("--p", playerColor || "var(--bulb)");
+    o.style.setProperty("--t", themeOf(s.clue.category).bg);
+    $("introTheme").textContent = SINGULAR[s.clue.category] || s.clue.category;
+    paintTheme($("introTheme"), s.clue.category);
+    $("introWarn").hidden = !s.clue.reprise;
+    o.hidden = false;
+    o.classList.remove("run"); void o.offsetWidth; o.classList.add("run");
+  }
+
+  // ---------- Disque ----------
+  let labelKey = "", revealShown = -1;
+  function renderDeck(s, active) {
+    const color = active ? active.color : "var(--bulb)";
+    // Disque et barre de temps aux couleurs du thème de la carte en cours
+    const cat = s.revealed && s.result ? s.revealed.category : s.clue ? s.clue.category : null;
+    $("deck").style.setProperty("--c", cat ? themeOf(cat).bg : color);
+    if (cat) paintTheme($("playBtn"), cat); else { $("playBtn").style.background = ""; $("playBtn").style.color = ""; }
+    $("playBtn").style.borderColor = cat ? themeOf(cat).bg : "";
+    $("turnLine").style.setProperty("--c", color);
+    if (active) maybeIntro(s, "C'est au tour de ", active.name, active.color);
+    maybeWin(s, null);
+    $("turnLine").innerHTML = "";
+    if (s.phase === "over") {
+      const w = s.winner ? byId(s.winner) : null;
+      if (w) { const n = el("span", "nm", w.name); n.style.setProperty("--c", w.color); $("turnLine").append(n, " gagne la partie !"); }
+      else $("turnLine").append("Partie terminée");
+    } else if (active) {
+      $("turnLine").append("C'est au tour de ", el("span", "nm", active.name));
+    }
+    $("msg").textContent = s.phase === "placing" && s.message ? s.message : "";
+
+    const L = $("label");
+    const v = $("verdict");
+    // Révélation (ou fin de partie juste après une révélation)
+    if (s.revealed && s.result) {
+      if (revealShown !== s.cardNo) {
+        revealShown = s.cardNo;
+        L.className = "label";
+        L.innerHTML = "";
+        L.append(el("div", "yr", String(s.revealed.year)), el("div", "ov", s.revealed.title), el("div", "sg", s.revealed.song), el("div", "ar", s.revealed.artist));
+        if (s.revealed.category) { const th = el("div", "theme sm", SINGULAR[s.revealed.category] || s.revealed.category); paintTheme(th, s.revealed.category); L.append(th); }
+        void L.offsetWidth;
+        L.classList.add("flip");
+        fitLabel();
+        const w = s.result.winner ? byId(s.result.winner) : null;
+        v.className = "verdict show " + (s.result.how === "swap" ? "" : w ? "ok" : "ko");
+        v.textContent = s.result.how === "swap" ? `${(byId(s.result.by) || {}).name || "?"} change de musique` : !w ? "Personne n'a trouvé" : s.result.how === "active" ? `${w.name} a juste !` : `${w.name} gagne la carte avec son jeton !`;
+      }
+      labelKey = "reveal" + s.cardNo;
+      return;
+    }
+    v.className = "verdict"; v.textContent = "";
+    if (s.phase === "challenge" && s.deadline) {
+      if (labelKey !== "count" + s.cardNo) {
+        labelKey = "count" + s.cardNo;
+        L.className = "label count"; L.innerHTML = "";
+        L.append(el("div", "big", ""), el("div", "cap", "secondes pour contester"));
+        if (s.clue && s.clue.category) { const th = el("div", "theme", SINGULAR[s.clue.category] || s.clue.category); paintTheme(th, s.clue.category); L.append(th); }
+      }
+      tickCountdown();
+      const names = s.challenges.map((c) => c.name);
+      $("msg").textContent = names.length ? `Jeton${names.length > 1 ? "s" : ""} posé${names.length > 1 ? "s" : ""} par ${names.join(", ")}` : "";
+      return;
+    }
+    const key = `${s.phase}${s.cardNo}`;
+    if (labelKey !== key) {
+      labelKey = key;
+      L.className = "label"; L.innerHTML = "";
+      L.append(el("div", "big", "?"));
+      if (s.clue && s.clue.category) { const th = el("div", "theme", SINGULAR[s.clue.category] || s.clue.category); paintTheme(th, s.clue.category); L.append(th); }
+      if (s.clue && s.clue.reprise) L.append(el("div", "warn", "chanson reprise : date l'œuvre"));
+    }
+  }
+
+  // Le rond n'a pas la place d'un carré : on réduit tous les textes ensemble
+  // jusqu'à ce que le bloc tienne dans ~78 % de la hauteur du rond
+  function fitLabel() {
+    const L = $("label");
+    const parts = [...L.children];
+    if (!L.querySelector(".ov")) return;
+    parts.forEach((p) => { p.style.fontSize = ""; });
+    const base = parts.map((p) => parseFloat(getComputedStyle(p).fontSize));
+    const height = () => {
+      const a = parts[0].getBoundingClientRect(), b = parts[parts.length - 1].getBoundingClientRect();
+      return b.bottom - a.top;
+    };
+    let k = 1;
+    for (let i = 0; i < 16 && height() > L.clientHeight * 0.78 && k > 0.4; i++) {
+      k *= 0.92;
+      parts.forEach((p, j) => { p.style.fontSize = base[j] * k + "px"; });
+    }
+  }
+  window.addEventListener("resize", fitLabel);
+  if (document.fonts) document.fonts.ready.then(fitLabel);
+
+  let clockOffset = 0;
+  function tickCountdown() {
+    if (!state || state.phase !== "challenge" || !state.deadline) return;
+    const left = Math.max(0, Math.ceil((state.deadline - (Date.now() + clockOffset)) / 1000));
+    const big = document.querySelector("#label.count .big");
+    if (big) big.textContent = String(left);
+    $("label").classList.toggle("hurry", left <= 3);
+  }
+  setInterval(tickCountdown, 200);
+
+  function renderTabs(s, active, shown) {
+    const T = $("tabs"); T.innerHTML = "";
+    T.hidden = !s.players.length;
+    for (const p of s.players) {
+      const t = el("div", "ptab");
+      t.setAttribute("role", "button"); t.tabIndex = 0;
+      t.style.setProperty("--c", p.color);
+      if (shown && p.id === shown.id && s.phase !== "lobby") t.classList.add("sel");
+      if (active && p.id === active.id && s.phase !== "lobby") t.classList.add("playing");
+      const r1 = el("div", "row1");
+      r1.append(el("span", "nm", p.name));
+      if (active && p.id === active.id && !["lobby", "over"].includes(s.phase)) r1.append(el("span", "now", "joue"));
+      if (!p.online) r1.append(el("span", "off", "hors ligne"));
+      const r2 = el("div", "row2");
+      const sc = el("span", "score", String(p.timeline.length));
+      sc.append(el("small", "", `/${s.settings.target}`));
+      const tok = el("span", "tok");
+      const minus = el("button", "step", "−"); minus.title = "Retirer un jeton"; minus.setAttribute("aria-label", `Retirer un jeton à ${p.name}`);
+      const plus = el("button", "step", "+"); plus.title = "Donner un jeton"; plus.setAttribute("aria-label", `Donner un jeton à ${p.name}`);
+      minus.onclick = (e) => { e.stopPropagation(); host("tokens", { pid: p.id, delta: -1 }); };
+      plus.onclick = (e) => { e.stopPropagation(); host("tokens", { pid: p.id, delta: 1 }); };
+      tok.append(minus, el("span", "coin"), el("span", "n", String(p.tokens)), plus);
+      r2.append(sc, tok);
+      const kick = el("button", "kick", "✕"); kick.title = `Retirer ${p.name} de la partie`;
+      kick.onclick = (e) => { e.stopPropagation(); if (confirm(`Retirer ${p.name} de la partie ?`)) host("kick", { pid: p.id }); };
+      t.append(r1, r2, kick);
+      t.onclick = () => { selected = p.id; render(); };
+      t.onkeydown = (e) => { if (e.key === "Enter") t.click(); };
+      T.append(t);
+    }
+  }
+
+  function renderStrip(s, active, shown) {
+    if (!shown) return;
+    const strip = $("strip"), track = $("track");
+    const keepScroll = strip.scrollLeft;
+    track.innerHTML = "";
+    $("tlTitle").textContent = `Frise de ${shown.name}`;
+    const tl = shown.timeline;
+    const isActiveTl = active && shown.id === active.id && ["placing", "challenge", "reveal"].includes(s.phase);
+    const ins = isActiveTl && s.result && s.revealed && s.result.how === "active" ? tl.findIndex((x) => x.id === s.revealed.id) : -1;
+    const mapSlot = (x) => (ins < 0 || x < ins ? x : x + 1);
+    const correct = ins < 0 && isActiveTl && s.phase === "reveal" && s.result ? s.result.correct : [];
+    const placementAt = ins < 0 ? s.placement : null;
+    track.append(el("div", "end", "plus ancien"));
+    let focus = null;
+    for (let i = 0; i <= tl.length; i++) {
+      const gap = el("div", "gap");
+      if (isActiveTl && placementAt === i) {
+        const m = el("div", "mystery");
+        m.style.setProperty("--c", active.color);
+        m.append(el("div", "q", "?"), el("div", "l", zoneLabel(tl, i)), el("div", "w", s.phase === "placing" ? "pas encore validé" : `choix de ${active.name}`));
+        if (s.phase === "reveal") m.classList.add(correct.includes(i) ? "ok" : "ko");
+        gap.append(m); focus = gap;
+      }
+      if (isActiveTl) {
+        for (const c of s.challenges.filter((c) => mapSlot(c.slot) === i)) {
+          const cp = byId(c.pid);
+          const k = el("div", "claim");
+          k.style.setProperty("--c", cp ? cp.color : "#777");
+          k.append(el("span", "coin"), c.name);
+          if (s.phase === "reveal") k.classList.add(correct.includes(i) ? "ok" : "ko");
+          gap.append(k);
+          if (!focus) focus = gap;
+        }
+      }
+      if (gap.childElementCount) gap.classList.add("has");
+      else if (correct.includes(i)) { gap.classList.add("correct"); focus = focus || gap; }
+      track.append(gap);
+      if (i < tl.length) {
+        const c = tl[i];
+        const tk = el("div", "ticket");
+        tk.style.setProperty("--c", themeOf(c.category).bg);
+        const stub = el("div", "stub"); stub.append(el("i"), el("span", "y", String(c.year)));
+        const info = el("div", "info");
+        info.append(el("div", "t", c.title), el("div", "s", c.song), el("div", "a", c.artist));
+        tk.title = `${c.title}\n${c.song}\n${c.artist}`;
+        tk.append(stub, info);
+        if (s.revealed && c.id === s.revealed.id && lastCount[shown.id] != null && tl.length > lastCount[shown.id]) { tk.classList.add("new"); focus = focus || tk; }
+        if (i === ins) { tk.append(el("span", "won", "Bien placé")); focus = focus || tk; }
+        track.append(tk);
+      }
+    }
+    track.append(el("div", "end", "plus récent"));
+    if (!tl.length) track.append(el("div", "empty", "Aucune carte pour l'instant."));
+
+    // Garde la position de défilement, sauf quand un nouvel élément mérite d'être montré
+    const key = `${shown.id}|${s.cardNo}|${s.phase}|${s.placement}|${s.challenges.length}`;
+    strip.style.scrollBehavior = "auto";
+    strip.scrollLeft = keepScroll;
+    if (key !== lastPlacementKey && focus) {
+      const r = focus.getBoundingClientRect(), sr = strip.getBoundingClientRect();
+      strip.scrollLeft += (r.left + r.width / 2) - (sr.left + sr.width / 2);
+    }
+    strip.style.scrollBehavior = "";
+    lastPlacementKey = key;
+  }
+
+  // ---------- Connexion ----------
+  const es = new EventSource("/events?host=1");
+  es.onmessage = (e) => { state = JSON.parse(e.data); if (state.now) clockOffset = state.now - Date.now(); render(); };
+  es.onerror = () => { if (state) $("sub").textContent = "Connexion au serveur perdue, nouvelle tentative…"; };
+</script>
+</body>
+</html>
