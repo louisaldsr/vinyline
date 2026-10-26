@@ -1,0 +1,23 @@
+#!/bin/bash
+# Lance le serveur Vinyline en arrière-plan et ouvre la page admin.
+# Si le serveur tourne déjà, ouvre juste la page. Il s'arrête avec le bouton « Éteindre »
+# de la page admin, ou tout seul après 30 minutes sans aucune page ouverte.
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+URL="http://localhost:8765/host"
+LOG="$HOME/Library/Logs/vinyline.log"
+
+up() { curl -s -o /dev/null -m 1 "$URL"; }
+
+if ! up; then
+  cd "$ROOT" || exit 1
+  nohup python3 game/server.py --idle-exit 1800 > "$LOG" 2>&1 &
+  disown
+  for _ in $(seq 1 40); do up && break; sleep 0.25; done
+fi
+
+if up; then
+  open "$URL"
+else
+  osascript -e "display alert \"Vinyline n'a pas pu démarrer\" message \"Détails dans $LOG\""
+fi

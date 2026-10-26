@@ -713,6 +713,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def host_action(self, data):
         t = data.get("type")
+        if t == "quit":
+            # Bouton « Éteindre » de la page admin : on répond puis on arrête le serveur
+            threading.Timer(0.5, SERVER.shutdown).start()
+            print("Serveur éteint depuis la page admin.", flush=True)
+            return {"ok": True}
         if t == "start":
             GAME.start()
         elif t == "reveal":
@@ -749,10 +754,28 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("Action inconnue")
 
 
+SERVER = None
+
+
+def watch_idle(server, limit):
+    """Arrête le serveur quand plus aucune page (admin ou joueur) n'est ouverte depuis `limit` secondes."""
+    last = time.time()
+    while True:
+        time.sleep(15)
+        if GAME.clients:
+            last = time.time()
+        elif time.time() - last > limit:
+            print("Plus personne connecté, serveur arrêté.", flush=True)
+            server.shutdown()
+            return
+
+
 def main():
     global GAME
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--idle-exit", type=int, default=0,
+                    help="s'arrête après N secondes sans aucune page ouverte (0 = jamais)")
     args = ap.parse_args()
 
     cards = load_cards()
@@ -760,7 +783,10 @@ def main():
         raise SystemExit("Aucune carte jouable (il faut un youtube_id et une année) dans data/cartes.csv")
     GAME = Game(cards)
 
-    server = QuietServer(("0.0.0.0", args.port), Handler)
+    global SERVER
+    server = SERVER = QuietServer(("0.0.0.0", args.port), Handler)
+    if args.idle_exit > 0:
+        threading.Thread(target=watch_idle, args=(server, args.idle_exit), daemon=True).start()
     ips = lan_ips()
     print(f"{len(cards)} cartes jouables chargées.")
     print(f"Admin (sur cet ordi) : http://localhost:{args.port}/host")
@@ -773,6 +799,7 @@ def main():
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nServeur arrêté.")
+    server.server_close()
 
 
 if __name__ == "__main__":

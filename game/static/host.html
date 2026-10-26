@@ -305,6 +305,7 @@
       <button class="btn" id="inviteBtn" hidden>Inviter</button>
       <button class="btn" id="toggleVideo" title="Utile pour passer une pub">Afficher la vidéo</button>
       <button class="btn" id="resetBtn">Nouvelle partie</button>
+      <button class="btn" id="quitBtn" title="Arrêter le serveur du jeu">Éteindre</button>
     </div>
   </div>
 
@@ -600,6 +601,23 @@
   };
   $("resetBtn").onclick = () => { if (confirm("Recommencer une partie ? Les joueurs restent connectés.")) host("reset"); };
   $("startBtn").onclick = () => host("start");
+  // Éteindre : deux clics pour éviter de couper une partie par erreur
+  let quitArmed = null, LOGO = "";
+  fetch("/logo.svg").then((r) => r.text()).then((t) => { LOGO = t; }).catch(() => {});
+  $("quitBtn").onclick = async () => {
+    if (!quitArmed) {
+      $("quitBtn").textContent = "Confirmer l'arrêt";
+      $("quitBtn").classList.add("primary");
+      quitArmed = setTimeout(() => { quitArmed = null; $("quitBtn").textContent = "Éteindre"; $("quitBtn").classList.remove("primary"); }, 4000);
+      return;
+    }
+    clearTimeout(quitArmed);
+    if (await host("quit")) {
+      es.close();
+      if (player && player.stopVideo) player.stopVideo();
+      document.body.innerHTML = '<div style="min-height:100vh;display:grid;place-items:center;text-align:center;font-family:Figtree,sans-serif;color:#9a92a6"><div><img src="data:image/svg+xml,' + encodeURIComponent(LOGO) + '" width="96" alt=""><h1 style="color:#f2c14e;margin:16px 0 8px">Vinyline est éteint</h1><p>Tu peux fermer cet onglet. Relance l\'app Vinyline pour rejouer.</p></div></div>';
+    }
+  };
   $("tlLeft").onclick = () => { $("strip").scrollBy({ left: -560 }); };
   $("tlRight").onclick = () => { $("strip").scrollBy({ left: 560 }); };
   document.addEventListener("keydown", (e) => {

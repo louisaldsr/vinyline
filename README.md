@@ -1,16 +1,30 @@
-# Vinyline
+<p align="center">
+  <img src="docs/logo.svg" alt="Logo Vinyline" width="160">
+</p>
 
-<img src="docs/logo.svg" alt="" width="96">
+<h1 align="center">Vinyline</h1>
 
-Jeu de frise chronologique en musique : on écoute un extrait (film, série, jeu vidéo ou chanson) et on le place dans sa frise selon son année. Premier à 10 cartes.
+<p align="center">
+  <b>Jeu de frise chronologique en musique</b><br>
+  On écoute un extrait (film, série, jeu vidéo ou chanson) et on le place dans sa frise selon son année.<br>
+  Premier à 10 cartes.
+</p>
+
+---
 
 ## Jouer
+
+Double-clique sur **Vinyline.app** (ou son icône dans le Dock) : le serveur démarre et la page admin s'ouvre.
+Les joueurs scannent le QR code affiché (même Wi-Fi, VPN coupé). Bouton « Éteindre » en haut de l'admin pour arrêter,
+sinon le serveur s'arrête seul après 30 minutes sans personne.
+
+Sans l'app :
 
 ```bash
 python3 game/server.py
 ```
 
-Ouvre http://localhost:8765/host sur l'ordi (même Wi-Fi que les joueurs, VPN coupé). Les joueurs scannent le QR code affiché.
+puis http://localhost:8765/host
 
 ## Trouver les vidéos des nouvelles cartes
 
