@@ -18,13 +18,13 @@ Double-clique sur **Vinyline.app** (ou son icône dans le Dock) : le serveur dé
 Les joueurs scannent le QR code affiché (même Wi-Fi, VPN coupé). Bouton « Éteindre » en haut de l'admin pour arrêter,
 sinon le serveur s'arrête seul après 30 minutes sans personne.
 
-Sans l'app :
+Le serveur prend le premier port libre à partir de 8765 : pas de souci si un autre programme utilise déjà ce port.
+
+Sans l'app (la page admin s'ouvre toute seule) :
 
 ```bash
 python3 game/server.py
 ```
-
-puis http://localhost:8765/host
 
 ## Trouver les vidéos des nouvelles cartes
 

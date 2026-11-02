@@ -4,8 +4,8 @@
 L'ordi lance le serveur, joue la musique et sert d'admin.
 Chaque joueur rejoint depuis son téléphone (même Wi-Fi) et joue sur sa frise.
 
-    python3 game/server.py              # port 8765 par défaut
-    python3 game/server.py --port 9000
+    python3 game/server.py              # premier port libre à partir de 8765, ouvre la page admin
+    python3 game/server.py --port 9000  # ce port-là uniquement
 
 Aucune dépendance : uniquement la bibliothèque standard de Python.
 Les actions admin ne sont acceptées que depuis l'ordi lui-même (localhost).
@@ -23,6 +23,7 @@ import subprocess
 import sys
 import threading
 import time
+import webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -540,6 +541,9 @@ GAME = None
 class QuietServer(ThreadingHTTPServer):
     """N'affiche pas les déconnexions normales (téléphone verrouillé, page rechargée…)."""
     daemon_threads = True
+    # Sans ça, macOS laisse se lancer sur un port déjà pris par un autre programme
+    # (qui lui reçoit alors les requêtes vers localhost)
+    allow_reuse_address = False
 
     def handle_error(self, request, client_address):
         import sys as _sys
@@ -593,7 +597,7 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/info":
             port = self.server.server_port
             urls = [f"http://{ip}:{port}/" for ip in lan_ips()]
-            return self.send_json(200, {"url": urls[0], "others": urls[1:]})
+            return self.send_json(200, {"app": "vinyline", "url": urls[0], "others": urls[1:]})
         if u.path == "/events":
             return self.events(parse_qs(u.query))
         self.send_json(404, {"error": "not found"})
@@ -755,6 +759,32 @@ class Handler(BaseHTTPRequestHandler):
 
 
 SERVER = None
+# Port du serveur en cours, lu par Vinyline.app pour retrouver une partie déjà lancée
+PORT_FILE = ROOT / ".server-port"
+
+
+def port_answers(port):
+    """Vrai si un programme répond déjà sur ce port en local (IPv4 ou IPv6)."""
+    for host in ("127.0.0.1", "::1"):
+        try:
+            socket.create_connection((host, port), timeout=0.3).close()
+            return True
+        except OSError:
+            pass
+    return False
+
+
+def open_server(port):
+    """Ouvre le serveur sur `port`, ou sans port imposé sur le premier libre à partir de 8765."""
+    tries = [port] if port else [*range(8765, 8785), 0]  # 0 : le système en choisit un
+    for p in tries:
+        if p and port_answers(p):
+            continue
+        try:
+            return QuietServer(("0.0.0.0", p), Handler)
+        except OSError:
+            continue
+    raise SystemExit(f"Le port {port} est déjà pris." if port else "Aucun port libre trouvé.")
 
 
 def watch_idle(server, limit):
@@ -773,7 +803,9 @@ def watch_idle(server, limit):
 def main():
     global GAME
     ap = argparse.ArgumentParser()
-    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--port", type=int, default=None,
+                    help="port imposé (par défaut : le premier libre à partir de 8765)")
+    ap.add_argument("--no-open", action="store_true", help="n'ouvre pas la page admin dans le navigateur")
     ap.add_argument("--idle-exit", type=int, default=0,
                     help="s'arrête après N secondes sans aucune page ouverte (0 = jamais)")
     args = ap.parse_args()
@@ -784,22 +816,29 @@ def main():
     GAME = Game(cards)
 
     global SERVER
-    server = SERVER = QuietServer(("0.0.0.0", args.port), Handler)
+    server = SERVER = open_server(args.port)
+    port = server.server_port
+    PORT_FILE.write_text(str(port))
     if args.idle_exit > 0:
         threading.Thread(target=watch_idle, args=(server, args.idle_exit), daemon=True).start()
     ips = lan_ips()
     print(f"{len(cards)} cartes jouables chargées.")
-    print(f"Admin (sur cet ordi) : http://localhost:{args.port}/host")
-    print(f"Joueurs (même Wi-Fi) : http://{ips[0]}:{args.port}/")
+    print(f"Admin (sur cet ordi) : http://127.0.0.1:{port}/host")
+    print(f"Joueurs (même Wi-Fi) : http://{ips[0]}:{port}/")
     for ip in ips[1:]:
-        print(f"  autre adresse possible : http://{ip}:{args.port}/")
+        print(f"  autre adresse possible : http://{ip}:{port}/")
     print("Si un téléphone se connecte, son adresse s'affiche ici.")
     print("Ctrl+C pour arrêter.")
+    if not args.no_open:
+        threading.Timer(0.3, webbrowser.open, args=(f"http://127.0.0.1:{port}/host",)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nServeur arrêté.")
-    server.server_close()
+    finally:
+        server.server_close()
+        if PORT_FILE.exists() and PORT_FILE.read_text() == str(port):
+            PORT_FILE.unlink()
 
 
 if __name__ == "__main__":
